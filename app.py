@@ -25,9 +25,9 @@ for var in required_env:
         print(f"¡ADVERTENCIA: La variable {var} no está configurada!")
 
 # Manejador global de errores
-@app.errorhandler(Exception)
-def manejar_error(e):
-    return render_template('error.html', mensaje_error="Ocurrió un problema técnico."), 500
+# @app.errorhandler(Exception)
+# def manejar_error(e):
+#     return render_template('error.html', mensaje_error="Ocurrió un problema técnico."), 500
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
