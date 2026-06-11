@@ -1,0 +1,30 @@
+<?php if ($mensaje): ?>
+    <div class="alert-modern <?= $tipo_alerta === 'success' ? 'success' : 'error' ?> mb-4" ...>
+    ...
+    </div>
+<?php endif; ?>
+
+{% if resultado %}
+    <div class="alert-modern {{ 'success' if resultado.tipo == 'success' else 'error' }} mb-4" role="alert">
+        <div class="alert-icon">
+            <i class="bi bi-{{ 'check-circle' if resultado.tipo == 'success' else 'exclamation-circle' }}"></i>
+        </div>
+        <div style="flex:1;">
+            <div class="alert-title">
+                {{ 'Ticket creado correctamente' if resultado.tipo == 'success' else 'Error al enviar' }}
+            </div>
+            {{ resultado.mensaje }}
+            {% if resultado.token %}
+                <div class="token-box">
+                    <div>
+                        <div class="label">Token de seguimiento UUID</div>
+                        <div class="code" id="tokenCode">{{ resultado.token }}</div>
+                    </div>
+                    <button class="token-copy" onclick="copyToken()">
+                        <i class="bi bi-clipboard me-1"></i> Copiar
+                    </button>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+{% endif %}

@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="font-family: 'Segoe UI', Arial, sans-serif; background-color: #f4f7f6; margin: 0; padding: 40px 20px;">
+
+    <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; border-top: 5px solid #1e52ff; box-shadow: 0 4px 15px rgba(0,0,0,0.1); overflow: hidden;">
+        
+        <div style="padding: 30px; text-align: center;">
+            <img src="https://despliegue-1-1.onrender.com/static/perfil_13_Logo.jpeg" alt="Red Solidaria Logo" style="max-width: 150px;">
+        </div>
+
+        <div style="padding: 0 30px 40px 30px;">
+            <h2 style="color: #003366; margin-top: 0;">¡Gracias por tu donación!</h2>
+            <p style="color: #555; line-height: 1.6;">Hola <strong>{{ nombre_usuario }}</strong>,</p>
+            
+            <div style="background:#f0f4ff; border-left:4px solid #1e52ff; padding:15px; border-radius:4px; margin:20px 0; color:#333;">
+                Hemos recibido tu donación de manera exitosa. Gracias por confiar en <b>Red Solidaria</b> y apoyar causas que transforman vidas.
+            </div>
+
+            <h3 style="color: #003366; font-size: 16px; border-bottom: 2px solid #eee; padding-bottom: 10px; text-align: center;">Detalles de la Transacción</h3>
+            
+            <table style="width: 80%; margin: 20px auto; color: #333; font-size: 14px; border-collapse: collapse;">
+                <tr><td style="padding: 8px 0;"><strong>Monto:</strong></td><td style="text-align: right; color: #28a745;"><strong>${{ monto }}</strong></td></tr>
+              <tr>
+                    <td style="padding: 8px 0;"><strong>Tarjeta:</strong></td>
+                    <td style="text-align: right; font-weight: bold; color: #333;">
+                        {% if marca_tarjeta | lower == 'visa' %}💳 Visa
+                        {% elif marca_tarjeta | lower == 'mastercard' %}💳 Mastercard
+                        {% elif marca_tarjeta | lower == 'amex' %}💳 Amex
+                        {% else %}💳 {{ marca_tarjeta | capitalize }}
+                        {% endif %}
+                    </td>
+                </tr>
+                <tr><td style="padding: 8px 0;"><strong>Terminada en:</strong></td><td style="text-align: right;">****{{ ultimos_4 }}</td></tr>
+                <tr><td style="padding: 8px 0;"><strong>Fecha:</strong></td><td style="text-align: right;">{{ fecha_donacion }}</td></tr>
+                <tr><td style="padding: 8px 0;"><strong>Token:</strong></td><td style="text-align: right; font-size: 11px; color: #888;">{{ token_transaccion }}</td></tr>
+            </table>
+
+            <div style="text-align: center; margin-top: 30px; padding: 20px; background-color: #e8f5e9; border-radius: 8px;">
+                <p style="color: #2e7d32; margin: 0; font-weight: bold;">❤️ Gracias por apoyar nuestra causa.</p>
+                <p style="color: #555; font-size: 14px; margin-top: 5px;">Tu aporte hace la diferencia y ayuda a construir un futuro mejor.</p>
+            </div>
+        </div>
+
+        <div style="background-color: #003366; color: #ffffff; padding: 20px; text-align: center; font-size: 12px;">
+            <p style="margin: 0;">Saludos, Equipo de Donaciones</p>
+            <p style="margin: 5px 0 0 0;"><strong>Red Solidaria</strong></p>
+        </div>
+    </div>
+</body>
+</html>

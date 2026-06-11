@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Publicar Necesidad — SolidariApp</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root { --azul-solidario: #1e52ff; --verde-solidario: #63ff5e; }
+        body { background: #f0f2f5; font-family: 'Segoe UI', sans-serif; display: flex; justify-content: center; padding: 50px 0; }
+        .card-form { width: 100%; max-width: 600px; background: white; padding: 40px; border-radius: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+        .btn-custom { background: linear-gradient(135deg, var(--azul-solidario), var(--verde-solidario)); color: white; border: none; border-radius: 50px; padding: 12px; font-weight: 600; }
+    </style>
+</head>
+<body>
+
+<div class="card-form">
+    <h3 class="fw-bold mb-4 text-center"><i class="fas fa-hand-holding-heart text-primary me-2"></i>Nueva Necesidad</h3>
+    <form method="POST" action="{{ url_for('fundacion_bp.publicar_necesidad') }}" id="form-publicar">
+    <div class="mb-3">
+        <label>Categoría</label>
+        <select name="categoria" id="categoria" class="form-select" onchange="actualizarCampos()" required>
+            <option value="">Seleccione una categoría...</option>
+            <option value="alimentos">Alimentos No Perecederos</option>
+            <option value="ropa">Ropa</option>
+            <option value="otros">Otros</option>
+        </select>
+    </div>
+
+    <div id="campos-dinamicos" class="card p-3 mb-3 d-none">
+        <div id="div-alimentos" class="d-none">
+            <input type="text" name="nombre_alimento" placeholder="Nombre del alimento" class="form-control mb-2">
+            <input type="date" name="fecha_limite" class="form-control mb-2">
+            <input type="number" name="tiempo_vencimiento" placeholder="Días para vencimiento" class="form-control mb-2">
+        </div>
+
+        <div id="div-ropa" class="d-none">
+            <select name="tipo_beneficiario" class="form-select mb-2">
+                <option value="hombre">Hombre</option>
+                <option value="mujer">Mujer</option>
+                <option value="niño">Niño</option>
+                <option value="niña">Niña</option>
+            </select>
+            <input type="text" name="talla" placeholder="Talla" class="form-control mb-2">
+            <input type="text" name="color" placeholder="Color" class="form-control mb-2">
+        </div>
+
+        <div id="div-otros" class="d-none">
+            <textarea name="descripcion_detallada" placeholder="Descripción del artículo" class="form-control mb-2"></textarea>
+        </div>
+    </div>
+
+    <button type="submit" class="btn btn-primary w-100">Publicar Necesidad</button>
+</form>
+
+<script>
+function actualizarCampos() {
+    const cat = document.getElementById('categoria').value;
+    document.getElementById('campos-dinamicos').classList.remove('d-none');
+    
+    // Ocultar todos
+    document.getElementById('div-alimentos').classList.add('d-none');
+    document.getElementById('div-ropa').classList.add('d-none');
+    document.getElementById('div-otros').classList.add('d-none');
+    
+    // Mostrar el seleccionado
+    if(cat) document.getElementById('div-' + cat).classList.remove('d-none');
+}
+</script>

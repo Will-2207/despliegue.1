@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Panel de Administración - Verificación</title>
+    </head>
+<body>
+    <div class="container mt-5">
+        <h2>Fundaciones Pendientes de Validación</h2>
+        <hr>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <table class="table table-hover mt-4">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Nombre Fundación</th>
+                    <th>NIT</th>
+                    <th>Acción</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for f in pendientes %}
+                <tr>
+                    <td>{{ f[0] }}</td>
+                    <td>{{ f[1] }}</td>
+                    <td>{{ f[2] }}</td>
+                    <td>
+                        <form action="{{ url_for('admin_bp.aprobar', fundacion_id=f[0]) }}" method="POST">
+                            <button type="submit" class="btn btn-success btn-sm">Aprobar Fundación</button>
+                        </form>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="4" class="text-center">No hay fundaciones pendientes de validación.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        
+        <a href="{{ url_for('donaciones_bp.donante') }}" class="btn btn-secondary mt-3">Volver al inicio</a>
+    </div>
+</body>
+</html>

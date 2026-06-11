@@ -1,0 +1,22 @@
+<div class="container py-5">
+    <a href="{{ url_for('donante') }}" class="btn btn-secondary mb-3">← Volver al Inicio</a>
+    <h2>Mis Aportes</h2>
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Causa</th>
+                <th>Cantidad</th>
+                <th>Fecha</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for d in donaciones %}
+            <tr>
+                <td>{{ d.titulo_necesidad }}</td>
+                <td>{{ d.cantidad_comprometida }}</td>
+                <td>{{ d.created_at }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
