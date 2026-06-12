@@ -4,6 +4,7 @@ from necesidades_manager import NecesidadesManager
 from database import get_db_connection
 from psycopg2.extras import RealDictCursor
 from decorators import login_required  # Importamos el decorador
+import traceback  # Asegúrate de importar esto arriba
 
 @donaciones_bp.route('/donante')
 @login_required
@@ -12,8 +13,13 @@ def donante():
         necesidades = NecesidadesManager.obtener_necesidades_activas()
         return render_template('donante.html', necesidades=necesidades)
     except Exception as e:
+        # ESTO ES LO QUE NECESITAMOS:
+        print("--- ERROR DETECTADO EN /donante ---")
+        traceback.print_exc() 
+        print("-----------------------------------")
         return render_template('error.html', mensaje_error="No pudimos cargar las causas."), 500
-
+    
+    
 @donaciones_bp.route('/mis-donaciones')
 @login_required
 def mis_donaciones():
