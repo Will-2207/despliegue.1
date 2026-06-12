@@ -16,54 +16,73 @@
 
 <div class="card-form">
     <h3 class="fw-bold mb-4 text-center"><i class="fas fa-hand-holding-heart text-primary me-2"></i>Nueva Necesidad</h3>
+    
     <form method="POST" action="{{ url_for('fundacion_bp.publicar_necesidad') }}" id="form-publicar">
-    <div class="mb-3">
-        <label>Categoría</label>
-        <select name="categoria" id="categoria" class="form-select" onchange="actualizarCampos()" required>
-            <option value="">Seleccione una categoría...</option>
-            <option value="alimentos">Alimentos No Perecederos</option>
-            <option value="ropa">Ropa</option>
-            <option value="otros">Otros</option>
-        </select>
-    </div>
-
-    <div id="campos-dinamicos" class="card p-3 mb-3 d-none">
-        <div id="div-alimentos" class="d-none">
-            <input type="text" name="nombre_alimento" placeholder="Nombre del alimento" class="form-control mb-2">
-            <input type="date" name="fecha_limite" class="form-control mb-2">
-            <input type="number" name="tiempo_vencimiento" placeholder="Días para vencimiento" class="form-control mb-2">
+        
+        <div class="mb-3">
+            <input type="text" name="titulo" placeholder="Título de la necesidad" class="form-control" required>
         </div>
-
-        <div id="div-ropa" class="d-none">
-            <select name="tipo_beneficiario" class="form-select mb-2">
-                <option value="hombre">Hombre</option>
-                <option value="mujer">Mujer</option>
-                <option value="niño">Niño</option>
-                <option value="niña">Niña</option>
+        <div class="mb-3">
+            <textarea name="descripcion" placeholder="Descripción breve" class="form-control" required></textarea>
+        </div>
+        <div class="mb-3">
+            <input type="number" name="cantidad_requerida" placeholder="Cantidad requerida" class="form-control" required>
+        </div>
+        <div class="mb-3">
+            <label>Categoría</label>
+            <select name="categoria" id="categoria" class="form-select" onchange="actualizarCampos()" required>
+                <option value="">Seleccione una categoría...</option>
+                <option value="alimentos">Alimentos No Perecederos</option>
+                <option value="ropa">Ropa</option>
+                <option value="otros">Otros</option>
             </select>
-            <input type="text" name="talla" placeholder="Talla" class="form-control mb-2">
-            <input type="text" name="color" placeholder="Color" class="form-control mb-2">
         </div>
 
-        <div id="div-otros" class="d-none">
-            <textarea name="descripcion_detallada" placeholder="Descripción del artículo" class="form-control mb-2"></textarea>
-        </div>
-    </div>
+        <div id="campos-dinamicos" class="card p-3 mb-3 d-none">
+            <div id="div-alimentos" class="d-none">
+                <input type="text" name="nombre_alimento" placeholder="Nombre del alimento" class="form-control mb-2">
+                <input type="date" name="fecha_limite" class="form-control mb-2">
+                <input type="number" name="tiempo_vencimiento" placeholder="Días para vencimiento" class="form-control mb-2">
+            </div>
 
-    <button type="submit" class="btn btn-primary w-100">Publicar Necesidad</button>
-</form>
+            <div id="div-ropa" class="d-none">
+                <select name="tipo_beneficiario" class="form-select mb-2">
+                    <option value="hombre">Hombre</option>
+                    <option value="mujer">Mujer</option>
+                    <option value="niño">Niño</option>
+                    <option value="niña">Niña</option>
+                </select>
+                <input type="text" name="talla" placeholder="Talla" class="form-control mb-2">
+                <input type="text" name="color" placeholder="Color" class="form-control mb-2">
+            </div>
+
+            <div id="div-otros" class="d-none">
+                <textarea name="descripcion_detallada" placeholder="Descripción detallada del artículo" class="form-control mb-2"></textarea>
+            </div>
+        </div>
+
+        <button type="submit" class="btn btn-custom w-100">Publicar Necesidad</button>
+        <a href="{{ url_for('fundacion_bp.dashboard_fundacion') }}" class="btn btn-link w-100 mt-2 text-decoration-none">Volver al panel</a>
+    </form>
+</div>
 
 <script>
 function actualizarCampos() {
     const cat = document.getElementById('categoria').value;
-    document.getElementById('campos-dinamicos').classList.remove('d-none');
+    const container = document.getElementById('campos-dinamicos');
     
     // Ocultar todos
     document.getElementById('div-alimentos').classList.add('d-none');
     document.getElementById('div-ropa').classList.add('d-none');
     document.getElementById('div-otros').classList.add('d-none');
     
-    // Mostrar el seleccionado
-    if(cat) document.getElementById('div-' + cat).classList.remove('d-none');
+    if(cat) {
+        container.classList.remove('d-none');
+        document.getElementById('div-' + cat).classList.remove('d-none');
+    } else {
+        container.classList.add('d-none');
+    }
 }
 </script>
+</body>
+</html>
