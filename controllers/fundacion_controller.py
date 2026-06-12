@@ -3,7 +3,7 @@ from . import fundacion_bp
 from database import get_db_connection
 from necesidades_manager import NecesidadesManager
 from soporte_manager import SoporteManager
-from decorators import login_required  # Importamos el decorador
+from decorators import login_required
 import json
 
 @fundacion_bp.route('/dashboard-fundacion')
@@ -18,6 +18,7 @@ def dashboard_fundacion():
     
     if not res: 
         flash("Acceso denegado: No eres una fundación registrada.", "danger")
+        # Corregido: uso explícito del Blueprint
         return redirect(url_for('donaciones_bp.donante'))
     
     fundacion_id = res[0]
@@ -36,26 +37,25 @@ def publicar_necesidad():
     
     if not fundacion:
         flash("Solo las fundaciones pueden publicar necesidades.", "danger")
+        # Corregido: uso explícito del Blueprint
         return redirect(url_for('donaciones_bp.donante'))
         
     if request.method == 'POST':
-        # 1. Extraemos los campos base
         titulo = request.form.get('titulo')
         descripcion = request.form.get('descripcion')
         cantidad = request.form.get('cantidad_requerida')
         categoria = request.form.get('categoria')
         fecha_limite = request.form.get('fecha_limite')
         
-        # 2. Construimos el diccionario de detalles específicos
         detalles = {k: v for k, v in request.form.items() if k not in 
                     ['titulo', 'descripcion', 'cantidad_requerida', 'categoria', 'fecha_limite']}
         
-        # 3. Llamamos al manager
         if NecesidadesManager.crear_necesidad(fundacion[0], titulo, descripcion, cantidad, categoria, fecha_limite, detalles):
             flash("¡Necesidad publicada exitosamente!", "success")
         else:
             flash("Error al publicar la necesidad.", "danger")
             
+        # Corregido: uso explícito del Blueprint
         return redirect(url_for('fundacion_bp.dashboard_fundacion'))
         
     return render_template('publicar_necesidad.html')

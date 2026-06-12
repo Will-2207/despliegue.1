@@ -10,16 +10,19 @@ def login():
         
     error = None
     if request.method == 'POST':
-        user = AuthManager.verificar_login(request.form.get('email'), request.form.get('pass'))
+        email = request.form.get('email')
+        password = request.form.get('pass')
+        
+        user = AuthManager.verificar_login(email, password)
         if user:
             # Guardamos los datos clave en la sesión
             session['usuario_id'] = user['id']
             session['usuario_nombre'] = user['nombre']
-            session['rol'] = user['rol']  # <--- Integrado: clave para el control de acceso
+            session['rol'] = user['rol']
             
-            # Redirección según rol (opcional, pero recomendado)
+            # Redirección según rol
             if user['rol'] == 'admin':
-                return redirect(url_for('admin_bp.dashboard')) # O tu ruta de admin
+                return redirect(url_for('admin_bp.dashboard'))
             return redirect(url_for('donaciones_bp.donante'))
             
         error = "Credenciales incorrectas."
@@ -58,6 +61,8 @@ def registro():
 
 @auth_bp.route('/logout')
 def logout():
+    # Limpiamos la sesión completamente
     session.clear()
     flash("Has cerrado sesión exitosamente.", "info")
+    # Redirigimos correctamente al login del blueprint
     return redirect(url_for('auth_bp.login'))
