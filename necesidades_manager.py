@@ -44,19 +44,25 @@ class NecesidadesManager:
     @staticmethod
     def registrar_donacion_fisica(necesidad_id, donante_id, fundacion_id, articulo, cantidad):
         conn = get_db_connection()
-        cur = conn.cursor()
+        # Usamos cursor normal para evitar líos de diccionarios si prefieres, 
+        # pero aquí accederemos por nombre de clave para mayor seguridad:
+        cur = conn.cursor() 
         try:
-            # 1. SEGURIDAD: Evitar que el dueño done a su propia causa
-            cur.execute("""
-                SELECT f.usuario_id 
-                FROM fundaciones f 
-                WHERE f.id = %s
-            """, (fundacion_id,))
-            
+            # 1. SEGURIDAD: Usamos un cursor normal, pero si el resultado es un diccionario, 
+            # accederemos por el nombre de la columna 'usuario_id'
+            cur.execute("SELECT usuario_id FROM fundaciones WHERE id = %s", (fundacion_id,))
             row = cur.fetchone()
             
-            # Si encontramos al dueño, verificamos que no sea el mismo donante
-            if row and row[0] == donante_id:
+            # Si 'row' es un diccionario (por el RealDictCursor), accedemos así:
+            # Si es una tupla, accederemos por índice. Para cubrir ambas, hagamos esto:
+            usuario_fundacion = None
+            if row:
+                if isinstance(row, dict):
+                    usuario_fundacion = row.get('usuario_id')
+                else:
+                    usuario_fundacion = row[0]
+            
+            if usuario_fundacion and usuario_fundacion == donante_id:
                 return False, "No puedes realizar una donación a tus propias necesidades."
 
             # 2. VALIDACIÓN: Verificar necesidad
@@ -66,26 +72,30 @@ class NecesidadesManager:
             if not resultado:
                 return False, "Error: La necesidad no existe en el sistema."
             
-            req, comp = resultado
+            # Si es diccionario, igual lo manejamos:
+            if isinstance(resultado, dict):
+                req = resultado.get('cantidad_requerida', 0)
+                comp = resultado.get('cantidad_comprometida', 0)
+            else:
+                req, comp = resultado
+            
             pendiente = req - comp
             
             if cantidad > pendiente:
                 return False, f"La cantidad excede lo necesario. Solo faltan {pendiente} unidades."
 
-            # 3. Registrar trazabilidad
+            # 3. Registrar trazabilidad (El resto igual)
             cur.execute("""
                 INSERT INTO donaciones_fisicas (necesidad_id, donante_id, fundacion_id, articulo, cantidad, created_at)
                 VALUES (%s, %s, %s, %s, %s, %s)
             """, (necesidad_id, donante_id, fundacion_id, articulo, cantidad, datetime.utcnow()))
             
-            # 4. Actualizar cantidad comprometida
             cur.execute("""
                 UPDATE necesidades 
                 SET cantidad_comprometida = cantidad_comprometida + %s 
                 WHERE id = %s
             """, (cantidad, necesidad_id))
             
-            # 5. Marcar finalizada si se cumplió la meta
             cur.execute("""
                 UPDATE necesidades 
                 SET estado = 'finalizada' 
@@ -97,12 +107,12 @@ class NecesidadesManager:
             
         except Exception as e:
             conn.rollback()
-            # Esto imprimirá el error real y la línea donde ocurre
             import traceback
-            error_msg = traceback.format_exc()
-            print(f"--- ERROR CRÍTICO DETALLADO ---")
-            print(error_msg)
-            return False, "Error interno. Revisa los logs de Render para detalles."
+            print(f"Error detallado: {traceback.format_exc()}")
+            return False, "Error interno al procesar la donación."
+        finally:
+            cur.close()
+            conn.close()
             
             
     @staticmethod
