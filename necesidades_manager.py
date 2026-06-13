@@ -84,20 +84,37 @@ class NecesidadesManager:
         conn = get_db_connection()
         cur = conn.cursor()
         try:
-            # 1. Registrar la trazabilidad
+            # 1. Verificar disponibilidad y bloquear la fila (FOR UPDATE) 
+            # Esto evita que dos personas donen lo mismo al mismo tiempo
+            cur.execute("""
+                SELECT cantidad_requerida, cantidad_comprometida 
+                FROM necesidades 
+                WHERE id = %s AND estado = 'activa' 
+                FOR UPDATE
+            """, (necesidad_id,))
+            
+            nec = cur.fetchone()
+            if not nec:
+                return False # La necesidad no existe o ya no está activa
+            
+            req, comp = nec
+            if (comp + cantidad) > req:
+                return False # Intentaron donar más de lo que hace falta
+
+            # 2. Registrar la trazabilidad
             cur.execute("""
                 INSERT INTO donaciones_fisicas (necesidad_id, donante_id, fundacion_id, articulo, cantidad_comprometida)
                 VALUES (%s, %s, %s, %s, %s)
             """, (necesidad_id, donante_id, fundacion_id, articulo, cantidad))
             
-            # 2. Actualizar la cantidad comprometida en la tabla necesidades
+            # 3. Actualizar la cantidad comprometida
             cur.execute("""
                 UPDATE necesidades 
                 SET cantidad_comprometida = cantidad_comprometida + %s 
                 WHERE id = %s
             """, (cantidad, necesidad_id))
             
-            # 3. Marcar como finalizada si ya se cumplió la meta
+            # 4. Cierre automático si se alcanza la meta
             cur.execute("""
                 UPDATE necesidades 
                 SET estado = 'finalizada' 
@@ -108,6 +125,7 @@ class NecesidadesManager:
             return True
         except Exception as e:
             conn.rollback()
+            print(f"Error crítico en transaccion de donacion: {e}")
             return False
         finally:
             cur.close()
