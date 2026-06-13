@@ -1,6 +1,7 @@
 from flask import Flask, render_template, session, redirect, url_for
 from database import get_db_connection
 from controllers import auth_bp, donaciones_bp, fundacion_bp
+from controllers import auth_bp, donaciones_bp, fundacion_bp, admin_bp
 from models import db  # <--- IMPORTANTE: Importar db
 import os
 from dotenv import load_dotenv
@@ -25,6 +26,7 @@ stripe.api_key = os.getenv('STRIPE_SECRET_KEY')
 app.register_blueprint(auth_bp)
 app.register_blueprint(donaciones_bp)
 app.register_blueprint(fundacion_bp)
+app.register_blueprint(admin_bp)
 
 # Validación de variables de entorno
 required_env = ['MAIL_USERNAME', 'MAIL_PASSWORD', 'STRIPE_SECRET_KEY', 'MONGO_URI', 'DATABASE_URL']
