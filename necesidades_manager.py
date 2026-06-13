@@ -97,11 +97,12 @@ class NecesidadesManager:
             
         except Exception as e:
             conn.rollback()
-            print(f"Error en transacción registrar_donacion_fisica: {str(e)}")
-            return False, "Error interno al procesar la donación."
-        finally:
-            cur.close()
-            conn.close()
+            # Esto imprimirá el error real y la línea donde ocurre
+            import traceback
+            error_msg = traceback.format_exc()
+            print(f"--- ERROR CRÍTICO DETALLADO ---")
+            print(error_msg)
+            return False, "Error interno. Revisa los logs de Render para detalles."
             
             
     @staticmethod
