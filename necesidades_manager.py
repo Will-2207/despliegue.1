@@ -86,7 +86,8 @@ class NecesidadesManager:
 
             # 3. Registrar trazabilidad (El resto igual)
             cur.execute("""
-                INSERT INTO donaciones_fisicas (necesidad_id, donante_id, fundacion_id, articulo, cantidad, created_at)
+                INSERT INTO donaciones_fisicas 
+                (necesidad_id, donante_id, fundacion_id, articulo, cantidad, created_at)
                 VALUES (%s, %s, %s, %s, %s, %s)
             """, (necesidad_id, donante_id, fundacion_id, articulo, cantidad, datetime.utcnow()))
             
