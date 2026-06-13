@@ -23,7 +23,8 @@ class Usuario(db.Model):
     password_hash = db.Column(db.String(255), nullable=False)
     telefono = db.Column(db.String(20))
     direccion = db.Column(db.Text)
-    rol = db.Column(db.String(20), default='donante') # Nuevo campo para control de acceso
+    rol = db.Column(db.String(20), default='donante') # Campo para control de acceso
+    estado_validacion = db.Column(db.String(20), default='pendiente') # NUEVO: Control de aprobación
     stripe_customer_id = db.Column(db.String(100))
     created_at = db.Column(db.TIMESTAMP, default=datetime.utcnow)
 
@@ -38,7 +39,6 @@ class Fundacion(db.Model):
     nombre_fundacion = db.Column(db.String(200), nullable=False)
     nombre_persona_cargo = db.Column(db.String(150), nullable=False)
     descripcion = db.Column(db.Text, nullable=False)
-    # Corregido: el nombre debe ser 'es_verificado' para que coincida con tu BD
     es_verificado = db.Column(db.Boolean, default=False) 
     created_at = db.Column(db.TIMESTAMP, default=datetime.utcnow)
 

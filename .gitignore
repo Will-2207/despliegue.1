@@ -1,3 +1,14 @@
+# Entorno virtual y carpetas de sistema
+venv/
 .env
-echo "__pycache__/" > .gitignore
-echo "*.pyc" >> .gitignore
+__pycache__/
+*.pyc
+
+# Archivos de base de datos local (si usas SQLite)
+*.sqlite
+*.db
+
+# Archivos de configuración de IDEs (opcional)
+.vscode/
+.idea/
+.DS_Store

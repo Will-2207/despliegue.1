@@ -1,7 +1,7 @@
 import bcrypt
-from database import get_db_connection
 import uuid
-from psycopg2.extras import RealDictCursor
+from database import get_db_connection
+from models import db, Usuario, Fundacion # Importamos SQLAlchemy y los modelos
 
 class SoporteManager:
     @staticmethod
@@ -15,6 +15,7 @@ class SoporteManager:
             return {'tipo': 'error', 'mensaje': 'Datos obligatorios incompletos.'}
 
         try:
+            # Soporte se mantiene con psycopg2 porque no tenemos modelo en models.py aún
             conn = get_db_connection()
             cur = conn.cursor()
             sql = """INSERT INTO tickets_soporte 
@@ -32,15 +33,13 @@ class SoporteManager:
         except Exception as e:
             return {'tipo': 'error', 'mensaje': f'Error al guardar el ticket: {str(e)}'}
 
+
 class AuthManager:
     @staticmethod
     def verificar_login(email, password):
-        conn = get_db_connection()
-        # Nota: Asegúrate de tener importado RealDictCursor arriba
-        cur = conn.cursor(cursor_factory=RealDictCursor)
         try:
-            cur.execute("SELECT * FROM usuarios WHERE email = %s", (email,))
-            user = cur.fetchone()
+            # Usamos SQLAlchemy para buscar al usuario
+            user = Usuario.query.filter_by(email=email).first()
             
             if user:
                 # 1. BYPASS TOTAL: Si es el admin, entra directo
@@ -48,22 +47,18 @@ class AuthManager:
                     return user
                 
                 # 2. SEGURIDAD: Si es fundación, debe estar aprobado
-                # El 'estado_validacion' es la columna que creamos en la base de datos
-                if user.get('rol') == 'fundacion' and user.get('estado_validacion') != 'aprobado':
+                if user.rol == 'fundacion' and user.estado_validacion != 'aprobado':
                     print(f"Intento de login bloqueado: {email} no está aprobado.")
                     return None # Retornamos None para que el controlador muestre error
                 
                 # 3. Verificación de contraseña con bcrypt
-                if bcrypt.checkpw(password.encode('utf-8'), user['password_hash'].encode('utf-8')):
+                if bcrypt.checkpw(password.encode('utf-8'), user.password_hash.encode('utf-8')):
                     return user
             
             return None
         except Exception as e:
             print(f"Error crítico en login: {e}")
             return None
-        finally:
-            cur.close()
-            conn.close()
             
     @staticmethod
     def registrar_usuario(nombre, email, password, direccion, telefono, tipo, datos_fundacion=None):
@@ -71,54 +66,49 @@ class AuthManager:
             print("DEBUG: Faltan datos obligatorios (nombre, email o pass)")
             return False
             
-        bytes_pass = password.encode('utf-8')
-        hash_pass = bcrypt.hashpw(bytes_pass, bcrypt.gensalt()).decode('utf-8')
-        
-        conn = get_db_connection()
-        cur = conn.cursor()
         try:
-            # Cambia esta parte de tu INSERT en auth.py:
-            sql = """INSERT INTO usuarios (nombre, email, password_hash, direccion, telefono, tipo_persona, rol, estado_validacion) 
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, 'pendiente') RETURNING id"""
-            valores = (
-                nombre, 
-                email, 
-                hash_pass, 
-                direccion or 'No especificada', 
-                telefono or '0000000000', 
-                tipo or 'natural', 
-                'fundacion' if tipo == 'juridica' else 'donante'
+            # Verificamos si el correo ya está registrado antes de hacer nada
+            if Usuario.query.filter_by(email=email).first():
+                print("DEBUG: El email ya existe en la base de datos.")
+                return False
+
+            bytes_pass = password.encode('utf-8')
+            hash_pass = bcrypt.hashpw(bytes_pass, bcrypt.gensalt()).decode('utf-8')
+            
+            # 1. Creamos el usuario en SQLAlchemy
+            nuevo_usuario = Usuario(
+                nombre=nombre,
+                email=email,
+                password_hash=hash_pass,
+                direccion=direccion or 'No especificada',
+                telefono=telefono or '0000000000',
+                rol='fundacion' if tipo == 'juridica' else 'donante',
+                estado_validacion='pendiente'
             )
             
-            cur.execute(sql, valores)
-            res = cur.fetchone()
-            
-            # --- CORRECCIÓN FORENSE ---
-            # Si res es diccionario, usamos ['id']. Si es tupla, usamos [0]
-            if isinstance(res, dict):
-                usuario_id = res.get('id')
-            else:
-                usuario_id = res[0]
-            
-            if not usuario_id:
-                raise Exception("No se pudo obtener el ID del usuario recién creado")
+            # Agregamos y hacemos flush para obtener el ID sin cerrar la transacción
+            db.session.add(nuevo_usuario)
+            db.session.flush() 
 
+            # 2. Si es fundación, la relacionamos con el usuario recién creado
             if tipo == 'juridica' and datos_fundacion:
-                cur.execute(
-                    """INSERT INTO fundaciones (usuario_id, nit, nombre_fundacion, nombre_persona_cargo, descripcion) 
-                       VALUES (%s, %s, %s, %s, %s)""",
-                    (usuario_id, datos_fundacion.get('nit'), datos_fundacion.get('nombre_fundacion'), 
-                     nombre, datos_fundacion.get('descripcion', 'Sin descripción'))
+                nueva_fundacion = Fundacion(
+                    usuario_id=nuevo_usuario.id,
+                    nit=datos_fundacion.get('nit'),
+                    nombre_fundacion=datos_fundacion.get('nombre_fundacion'),
+                    nombre_persona_cargo=nombre, 
+                    descripcion=datos_fundacion.get('descripcion', 'Sin descripción'),
+                    es_verificado=False
                 )
+                db.session.add(nueva_fundacion)
             
-            conn.commit()
+            # 3. Confirmamos ambos registros en la base de datos al mismo tiempo
+            db.session.commit()
             return True
+            
         except Exception as e:
-            conn.rollback()
+            db.session.rollback() # Si algo falla, deshacemos todo para no dejar datos a medias
             import traceback
             print(f"--- ERROR CRÍTICO DE REGISTRO ---")
             print(traceback.format_exc())
             return False
-        finally:
-            cur.close()
-            conn.close()

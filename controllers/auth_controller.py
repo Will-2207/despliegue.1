@@ -1,13 +1,14 @@
 from flask import render_template, request, redirect, url_for, flash, session
 from . import auth_bp
-from auth import AuthManager
+from auth import AuthManager # Ajusta el import si tu archivo se llama distinto
 
 @auth_bp.route('/', methods=['GET', 'POST'])
 def login():
-    # Si ya está logueado, redirigir al donante (o a donde corresponda)
+    # Si ya está logueado, redirigir según su rol
     if 'usuario_id' in session: 
         if session.get('rol') == 'admin':
-            return redirect(url_for('fundacion_bp.dashboard_fundacion'))
+            # CORRECCIÓN: Redirigir al panel de administrador real
+            return redirect(url_for('admin_bp.dashboard'))
         return redirect(url_for('donaciones_bp.donante'))
         
     error = None
@@ -17,18 +18,19 @@ def login():
         
         user = AuthManager.verificar_login(email, password)
         if user:
-            # Guardamos los datos clave en la sesión
-            session['usuario_id'] = user['id']
-            session['usuario_nombre'] = user['nombre']
-            session['rol'] = user['rol']
+            # CORRECCIÓN CRÍTICA: Usar sintaxis de objeto (user.id) y no diccionario (user['id'])
+            session['usuario_id'] = user.id
+            session['usuario_nombre'] = user.nombre
+            session['rol'] = user.rol
             
             # Redirección según rol corregida
-            if user['rol'] == 'admin':
-                return redirect(url_for('fundacion_bp.dashboard_fundacion'))
+            if user.rol == 'admin':
+                return redirect(url_for('admin_bp.dashboard'))
             
             return redirect(url_for('donaciones_bp.donante'))
             
-        error = "Credenciales incorrectas."
+        # Mensaje ajustado para que cubra contraseñas malas o falta de aprobación
+        error = "Credenciales incorrectas o cuenta pendiente de aprobación."
         
     return render_template('login.html', error=error)
 
@@ -53,10 +55,11 @@ def registro():
                     'descripcion': request.form.get('descripcion')
                 }
 
+            # Llamamos al AuthManager que ya está en SQLAlchemy
             if AuthManager.registrar_usuario(nombre, email, password, direccion, telefono, tipo, datos_fundacion):
                 flash('Registro exitoso, ahora puedes iniciar sesión.', 'success')
                 return redirect(url_for('auth_bp.login'))
-            error = "No fue posible registrar el usuario."
+            error = "El correo ya está registrado o faltan datos."
         except Exception as e:
             error = f"Error: {str(e)}"
             
@@ -67,5 +70,4 @@ def logout():
     # Limpiamos la sesión completamente
     session.clear()
     flash("Has cerrado sesión exitosamente.", "info")
-    # Redirigimos correctamente al login del blueprint
     return redirect(url_for('auth_bp.login'))
