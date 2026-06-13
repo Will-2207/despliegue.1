@@ -1,8 +1,7 @@
 import bcrypt
 from database import get_db_connection
 import uuid
-from datetime import datetime
-from psycopg2.extras import RealDictCursor # Importamos esto para asegurar diccionarios
+from psycopg2.extras import RealDictCursor
 
 class SoporteManager:
     @staticmethod
@@ -35,31 +34,8 @@ class SoporteManager:
 
 class AuthManager:
     @staticmethod
-    def registrar_usuario(nombre, email, password, direccion, telefono, tipo):
-        if "@" not in email: return False
-        
-        bytes_pass = password.encode('utf-8')
-        hash_pass = bcrypt.hashpw(bytes_pass, bcrypt.gensalt()).decode('utf-8')
-        
-        conn = get_db_connection()
-        cur = conn.cursor()
-        try:
-            cur.execute(
-                "INSERT INTO usuarios (nombre, email, password_hash, direccion, telefono, tipo_persona) VALUES (%s, %s, %s, %s, %s, %s)",
-                (nombre, email, hash_pass, direccion, telefono, tipo)
-            )
-            conn.commit()
-            return True
-        except Exception:
-            return False
-        finally:
-            cur.close()
-            conn.close()
-
-    @staticmethod
     def verificar_login(email, password):
         conn = get_db_connection()
-        # FORZAMOS EL USO DE RealDictCursor AQUÍ para asegurar que devuelva un diccionario
         cur = conn.cursor(cursor_factory=RealDictCursor)
         
         try:
@@ -67,7 +43,7 @@ class AuthManager:
             user = cur.fetchone()
             
             if user:
-                # Verificación de hash
+                # Verificación de hash con bcrypt (el correcto para tu lógica)
                 if bcrypt.checkpw(password.encode('utf-8'), user['password_hash'].encode('utf-8')):
                     return user
             return None
@@ -77,7 +53,6 @@ class AuthManager:
         finally:
             cur.close()
             conn.close()
-            
             
     @staticmethod
     def registrar_usuario(nombre, email, password, direccion, telefono, tipo, datos_fundacion=None):
@@ -89,8 +64,7 @@ class AuthManager:
         conn = get_db_connection()
         cur = conn.cursor()
         try:
-            # 1. Insertar el Usuario y obtener su ID recién creado
-            # Nota: Asegúrate que tu tabla usuarios tenga el campo 'rol'
+            # 1. Insertar el Usuario
             cur.execute(
                 "INSERT INTO usuarios (nombre, email, password_hash, direccion, telefono, tipo_persona, rol) VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING id",
                 (nombre, email, hash_pass, direccion, telefono, tipo, 'fundacion' if tipo == 'juridica' else 'donante')
@@ -109,9 +83,9 @@ class AuthManager:
             conn.commit()
             return True
         except Exception as e:
-            conn.rollback() # Seguridad: si algo falla, no dejamos datos huérfanos
+            conn.rollback()
             print(f"Error en registro: {e}")
             return False
         finally:
             cur.close()
-            conn.close()        
+            conn.close()
