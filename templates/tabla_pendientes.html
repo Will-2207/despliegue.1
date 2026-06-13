@@ -1,0 +1,28 @@
+<table class="table table-hover">
+    <thead class="table-light">
+        <tr>
+            <th>Nombre</th>
+            <th>NIT</th>
+            <th>Correo</th>
+            <th>Acción</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for f in pendientes %}
+        <tr>
+            <td>{{ f.nombre_fundacion }}</td>
+            <td>
+                {{ f.nit }} 
+                <a href="https://www.rues.org.co/ConsultarNIT?NIT={{ f.nit }}" target="_blank">
+                    <i class="fas fa-search text-primary"></i>
+                </a>
+            </td>
+            <td>{{ f.usuario.email }}</td>
+            <td>
+                <button class="btn btn-success btn-sm" onclick="abrirModalAccion('aprobar_fundacion', '{{ f.id }}')">Aprobar</button>
+                <button class="btn btn-danger btn-sm" onclick="abrirModalAccion('rechazar_fundacion', '{{ f.id }}')">Rechazar</button>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>

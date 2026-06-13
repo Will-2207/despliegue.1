@@ -1,0 +1,14 @@
+<table class="table table-hover">
+    <thead class="table-light">
+        <tr><th>ID Transacción</th><th>Monto</th><th>Fecha</th></tr>
+    </thead>
+    <tbody>
+        {% for p in pagos %}
+        <tr>
+            <td>{{ p.id }}</td>
+            <td>${{ p.monto }}</td>
+            <td>{{ p.fecha_creacion.strftime('%Y-%m-%d') }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>

@@ -1,0 +1,15 @@
+<table class="table table-hover">
+    <thead class="table-light">
+        <tr><th>Donante</th><th>Fundación</th><th>Necesidad</th><th>Monto</th></tr>
+    </thead>
+    <tbody>
+        {% for item in donaciones %}
+        <tr>
+            <td>{{ item.donante_nombre }}</td>
+            <td>{{ item.fundacion_nombre }}</td>
+            <td>{{ item.necesidad_titulo }}</td>
+            <td>${{ item.Donacion.monto }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>

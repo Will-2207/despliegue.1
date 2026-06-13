@@ -1,0 +1,16 @@
+<table class="table table-hover">
+    <thead class="table-light">
+        <tr><th>Nombre</th><th>Email</th><th>Acción</th></tr>
+    </thead>
+    <tbody>
+        {% for d in donantes %}
+        <tr>
+            <td>{{ d.nombre }}</td>
+            <td>{{ d.email }}</td>
+            <td>
+                <button class="btn btn-warning btn-sm" onclick="abrirModalAccion('eliminar_donante', '{{ d.id }}')">Suspender</button>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
