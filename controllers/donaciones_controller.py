@@ -30,7 +30,12 @@ def mis_donaciones():
 @login_required
 def donar_fisica():
     necesidad_id = request.form.get('necesidad_id')
-    cantidad = request.form.get('cantidad')
+    # Convertimos la cantidad a int aquí mismo para evitar errores de tipo
+    try:
+        cantidad = int(request.form.get('cantidad', 0))
+    except ValueError:
+        flash("La cantidad debe ser un número válido.", "danger")
+        return redirect(url_for('donaciones_bp.donante'))
     
     conn = get_db_connection()
     cur = conn.cursor(cursor_factory=RealDictCursor)
@@ -40,9 +45,16 @@ def donar_fisica():
     conn.close()
     
     if nec:
-        if NecesidadesManager.registrar_donacion_fisica(necesidad_id, session['usuario_id'], nec['fundacion_id'], nec['categoria'], cantidad):
-            flash("¡Gracias por tu donación física!", "success")
+        # Aquí capturamos el éxito y el mensaje real del manager
+        exito, mensaje = NecesidadesManager.registrar_donacion_fisica(
+            necesidad_id, session['usuario_id'], nec['fundacion_id'], nec['categoria'], cantidad
+        )
+        
+        if exito:
+            flash(mensaje, "success")
         else:
-            flash("Error al registrar la donación.", "danger")
+            flash(mensaje, "danger") # Esto mostrará el error específico del manager
+    else:
+        flash("La necesidad no existe.", "danger")
             
     return redirect(url_for('donaciones_bp.donante'))
