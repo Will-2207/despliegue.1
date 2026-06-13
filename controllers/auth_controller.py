@@ -4,8 +4,10 @@ from auth import AuthManager
 
 @auth_bp.route('/', methods=['GET', 'POST'])
 def login():
-    # Si ya está logueado, redirigir al donante
+    # Si ya está logueado, redirigir al donante (o a donde corresponda)
     if 'usuario_id' in session: 
+        if session.get('rol') == 'admin':
+            return redirect(url_for('fundacion_bp.dashboard_fundacion'))
         return redirect(url_for('donaciones_bp.donante'))
         
     error = None
@@ -20,9 +22,10 @@ def login():
             session['usuario_nombre'] = user['nombre']
             session['rol'] = user['rol']
             
-            # Redirección según rol
+            # Redirección según rol corregida
             if user['rol'] == 'admin':
-                return redirect(url_for('admin_bp.dashboard'))
+                return redirect(url_for('fundacion_bp.dashboard_fundacion'))
+            
             return redirect(url_for('donaciones_bp.donante'))
             
         error = "Credenciales incorrectas."
