@@ -36,21 +36,30 @@ class AuthManager:
     @staticmethod
     def verificar_login(email, password):
         conn = get_db_connection()
+        # Nota: Asegúrate de tener importado RealDictCursor arriba
         cur = conn.cursor(cursor_factory=RealDictCursor)
         try:
             cur.execute("SELECT * FROM usuarios WHERE email = %s", (email,))
             user = cur.fetchone()
             
             if user:
-                # BYPASS TOTAL: Si el usuario es el admin, entramos sí o sí.
+                # 1. BYPASS TOTAL: Si es el admin, entra directo
                 if email == 'admin@redsolidaria.com' and password == 'admin123':
                     return user
-                # Si no es el admin, usamos bcrypt normal
+                
+                # 2. SEGURIDAD: Si es fundación, debe estar aprobado
+                # El 'estado_validacion' es la columna que creamos en la base de datos
+                if user.get('rol') == 'fundacion' and user.get('estado_validacion') != 'aprobado':
+                    print(f"Intento de login bloqueado: {email} no está aprobado.")
+                    return None # Retornamos None para que el controlador muestre error
+                
+                # 3. Verificación de contraseña con bcrypt
                 if bcrypt.checkpw(password.encode('utf-8'), user['password_hash'].encode('utf-8')):
                     return user
+            
             return None
         except Exception as e:
-            print(f"Error en login: {e}")
+            print(f"Error crítico en login: {e}")
             return None
         finally:
             cur.close()
@@ -68,9 +77,9 @@ class AuthManager:
         conn = get_db_connection()
         cur = conn.cursor()
         try:
-            sql = """INSERT INTO usuarios (nombre, email, password_hash, direccion, telefono, tipo_persona, rol) 
-                     VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING id"""
-            
+            # Cambia esta parte de tu INSERT en auth.py:
+            sql = """INSERT INTO usuarios (nombre, email, password_hash, direccion, telefono, tipo_persona, rol, estado_validacion) 
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, 'pendiente') RETURNING id"""
             valores = (
                 nombre, 
                 email, 
