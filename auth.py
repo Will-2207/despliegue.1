@@ -59,6 +59,7 @@ class AuthManager:
     @staticmethod
     def registrar_usuario(nombre, email, password, direccion, telefono, tipo, datos_fundacion=None):
         if not nombre or not email or not password: 
+            print("DEBUG: Faltan datos obligatorios (nombre, email o pass)")
             return False
             
         bytes_pass = password.encode('utf-8')
@@ -67,22 +68,32 @@ class AuthManager:
         conn = get_db_connection()
         cur = conn.cursor()
         try:
-            # 1. Intentamos el INSERT
             sql = """INSERT INTO usuarios (nombre, email, password_hash, direccion, telefono, tipo_persona, rol) 
                      VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING id"""
-            valores = (nombre, email, hash_pass, direccion or 'N/A', telefono or '000', tipo or 'natural', 'fundacion' if tipo == 'juridica' else 'donante')
+            
+            valores = (
+                nombre, 
+                email, 
+                hash_pass, 
+                direccion or 'No especificada', 
+                telefono or '0000000000', 
+                tipo or 'natural', 
+                'fundacion' if tipo == 'juridica' else 'donante'
+            )
             
             cur.execute(sql, valores)
             res = cur.fetchone()
             
-            if not res:
-                # Esto nos dirá si el insert fue ignorado
-                print("DEBUG CRITICO: El insert fue exitoso pero no retornó ID.")
-                return False
-                
-            usuario_id = res[0]
+            # --- CORRECCIÓN FORENSE ---
+            # Si res es diccionario, usamos ['id']. Si es tupla, usamos [0]
+            if isinstance(res, dict):
+                usuario_id = res.get('id')
+            else:
+                usuario_id = res[0]
+            
+            if not usuario_id:
+                raise Exception("No se pudo obtener el ID del usuario recién creado")
 
-            # 2. Inserción de fundación
             if tipo == 'juridica' and datos_fundacion:
                 cur.execute(
                     """INSERT INTO fundaciones (usuario_id, nit, nombre_fundacion, nombre_persona_cargo, descripcion) 
@@ -95,10 +106,9 @@ class AuthManager:
             return True
         except Exception as e:
             conn.rollback()
-            # Capturamos el error real de la base de datos
             import traceback
-            error_msg = traceback.format_exc()
-            print(f"--- ERROR DE BASE DE DATOS ---\n{error_msg}")
+            print(f"--- ERROR CRÍTICO DE REGISTRO ---")
+            print(traceback.format_exc())
             return False
         finally:
             cur.close()
