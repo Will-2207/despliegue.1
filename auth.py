@@ -59,7 +59,6 @@ class AuthManager:
     @staticmethod
     def registrar_usuario(nombre, email, password, direccion, telefono, tipo, datos_fundacion=None):
         if not nombre or not email or not password: 
-            print("DEBUG: Faltan datos obligatorios (nombre, email o pass)")
             return False
             
         bytes_pass = password.encode('utf-8')
@@ -68,23 +67,22 @@ class AuthManager:
         conn = get_db_connection()
         cur = conn.cursor()
         try:
-            # Insertamos asegurando valores por defecto si vienen vacíos
+            # 1. Intentamos el INSERT
             sql = """INSERT INTO usuarios (nombre, email, password_hash, direccion, telefono, tipo_persona, rol) 
                      VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING id"""
-            
-            valores = (
-                nombre, 
-                email, 
-                hash_pass, 
-                direccion if direccion else 'No especificada', 
-                telefono if telefono else '0000000000', 
-                tipo if tipo else 'natural', 
-                'fundacion' if tipo == 'juridica' else 'donante'
-            )
+            valores = (nombre, email, hash_pass, direccion or 'N/A', telefono or '000', tipo or 'natural', 'fundacion' if tipo == 'juridica' else 'donante')
             
             cur.execute(sql, valores)
-            usuario_id = cur.fetchone()[0]
+            res = cur.fetchone()
+            
+            if not res:
+                # Esto nos dirá si el insert fue ignorado
+                print("DEBUG CRITICO: El insert fue exitoso pero no retornó ID.")
+                return False
+                
+            usuario_id = res[0]
 
+            # 2. Inserción de fundación
             if tipo == 'juridica' and datos_fundacion:
                 cur.execute(
                     """INSERT INTO fundaciones (usuario_id, nit, nombre_fundacion, nombre_persona_cargo, descripcion) 
@@ -97,7 +95,10 @@ class AuthManager:
             return True
         except Exception as e:
             conn.rollback()
-            print(f"ERROR TÉCNICO COMPLETO: {str(e)}") 
+            # Capturamos el error real de la base de datos
+            import traceback
+            error_msg = traceback.format_exc()
+            print(f"--- ERROR DE BASE DE DATOS ---\n{error_msg}")
             return False
         finally:
             cur.close()
