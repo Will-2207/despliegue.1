@@ -47,22 +47,25 @@ class NecesidadesManager:
         cur = conn.cursor()
         try:
             # 1. SEGURIDAD: Evitar que el dueño de la fundación done a su propia causa
-            # Suponemos que en tu tabla 'fundaciones' tienes un campo 'usuario_id' que es el dueño
             cur.execute("SELECT usuario_id FROM fundaciones WHERE id = %s", (fundacion_id,))
             dueño_fundacion = cur.fetchone()
             
             if dueño_fundacion and dueño_fundacion[0] == donante_id:
-                return False, "¡Seguridad! No puedes donar a tus propias causas."
+                return False, "No puedes realizar una donación a tus propias necesidades."
 
-            # 2. Validación: Verificar cuánto queda pendiente
-            cur.execute("""
-                SELECT cantidad_requerida - cantidad_comprometida as pendiente 
-                FROM necesidades WHERE id = %s
-            """, (necesidad_id,))
+            # 2. VALIDACIÓN: Verificar que la necesidad exista y obtener saldos
+            cur.execute("SELECT cantidad_requerida, cantidad_comprometida FROM necesidades WHERE id = %s", (necesidad_id,))
             resultado = cur.fetchone()
             
-            if not resultado or cantidad > resultado[0]:
-                return False, "La cantidad excede lo necesario o la necesidad no existe."
+            if not resultado:
+                return False, "Error: La necesidad no existe en el sistema."
+            
+            # Desempaquetamos los valores de la tupla (requerida, comprometida)
+            req, comp = resultado
+            pendiente = req - comp
+            
+            if cantidad > pendiente:
+                return False, f"La cantidad excede lo necesario. Solo faltan {pendiente} unidades."
 
             # 3. Registrar la trazabilidad
             cur.execute("""
@@ -85,15 +88,17 @@ class NecesidadesManager:
             """, (necesidad_id,))
             
             conn.commit()
-            return True, "Donación realizada correctamente."
+            return True, "¡Donación realizada correctamente!"
+            
         except Exception as e:
             conn.rollback()
-            print(f"Error en transacción: {e}")
+            print(f"Error en transacción registrar_donacion_fisica: {str(e)}")
             return False, "Error interno al procesar la donación."
         finally:
             cur.close()
             conn.close()
-
+            
+            
     @staticmethod
     def obtener_donaciones_por_fundacion(fundacion_id):
         conn = get_db_connection()
