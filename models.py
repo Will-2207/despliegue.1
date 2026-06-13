@@ -64,8 +64,12 @@ class Necesidad(db.Model):
 
 class Donacion(db.Model):
     __tablename__ = 'donaciones'
+    
     id = db.Column(db.Integer, primary_key=True)
-    donante_id = db.Column(db.Integer, db.ForeignKey('usuarios.id'), nullable=False)
+    
+    # Mapeamos 'donante_id' en el código a la columna 'usuario_id' que ya existe en tu DB
+    donante_id = db.Column('usuario_id', db.Integer, db.ForeignKey('usuarios.id'), nullable=False)
+    
     necesidad_id = db.Column(db.Integer, db.ForeignKey('necesidades.id'), nullable=False)
     monto = db.Column(db.Numeric(15, 2), nullable=False)
     token_uuid = db.Column(db.String(255), unique=True)
