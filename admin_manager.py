@@ -58,6 +58,11 @@ class AdminManager:
     @staticmethod
     def obtener_listado_donantes():
         return Usuario.query.filter_by(rol='donante').all()
+    
+    @staticmethod
+    def obtener_listado_fundaciones():
+        return Fundacion.query.all()
+    
 
     @staticmethod
     def obtener_listado_donaciones_completas():
