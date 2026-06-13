@@ -73,8 +73,11 @@ class AuthManager:
             )
             usuario_id = cur.fetchone()[0]
 
-            # 2. Si es jurídica, insertar en la tabla fundaciones
-            if tipo == 'juridica' and datos_fundacion:
+            # 2. Si es jurídica, validar que vienen datos antes de insertar
+            if tipo == 'juridica':
+                if not datos_fundacion or not datos_fundacion.get('nit'):
+                    raise Exception("Faltan datos de la fundación (NIT requerido)")
+                
                 cur.execute(
                     """INSERT INTO fundaciones (usuario_id, nit, nombre_fundacion, nombre_persona_cargo, descripcion) 
                        VALUES (%s, %s, %s, %s, %s)""",
@@ -86,7 +89,7 @@ class AuthManager:
             return True
         except Exception as e:
             conn.rollback()
-            print(f"Error en registro: {e}")
+            print(f"DEBUG ERROR REGISTRO: {str(e)}") # Esto aparecerá en los logs de Render
             return False
         finally:
             cur.close()
