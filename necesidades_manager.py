@@ -46,41 +46,46 @@ class NecesidadesManager:
         conn = get_db_connection()
         cur = conn.cursor()
         try:
-            # 1. SEGURIDAD: Evitar que el dueño de la fundación done a su propia causa
-            cur.execute("SELECT usuario_id FROM fundaciones WHERE id = %s", (fundacion_id,))
-            dueño_fundacion = cur.fetchone()
+            # 1. SEGURIDAD: Evitar que el dueño done a su propia causa
+            cur.execute("""
+                SELECT f.usuario_id 
+                FROM fundaciones f 
+                WHERE f.id = %s
+            """, (fundacion_id,))
             
-            if dueño_fundacion and dueño_fundacion[0] == donante_id:
+            row = cur.fetchone()
+            
+            # Si encontramos al dueño, verificamos que no sea el mismo donante
+            if row and row[0] == donante_id:
                 return False, "No puedes realizar una donación a tus propias necesidades."
 
-            # 2. VALIDACIÓN: Verificar que la necesidad exista y obtener saldos
+            # 2. VALIDACIÓN: Verificar necesidad
             cur.execute("SELECT cantidad_requerida, cantidad_comprometida FROM necesidades WHERE id = %s", (necesidad_id,))
             resultado = cur.fetchone()
             
             if not resultado:
                 return False, "Error: La necesidad no existe en el sistema."
             
-            # Desempaquetamos los valores de la tupla (requerida, comprometida)
             req, comp = resultado
             pendiente = req - comp
             
             if cantidad > pendiente:
                 return False, f"La cantidad excede lo necesario. Solo faltan {pendiente} unidades."
 
-            # 3. Registrar la trazabilidad
+            # 3. Registrar trazabilidad
             cur.execute("""
                 INSERT INTO donaciones_fisicas (necesidad_id, donante_id, fundacion_id, articulo, cantidad, created_at)
                 VALUES (%s, %s, %s, %s, %s, %s)
             """, (necesidad_id, donante_id, fundacion_id, articulo, cantidad, datetime.utcnow()))
             
-            # 4. Actualizar la cantidad comprometida
+            # 4. Actualizar cantidad comprometida
             cur.execute("""
                 UPDATE necesidades 
                 SET cantidad_comprometida = cantidad_comprometida + %s 
                 WHERE id = %s
             """, (cantidad, necesidad_id))
             
-            # 5. Marcar como finalizada si se cumplió la meta
+            # 5. Marcar finalizada si se cumplió la meta
             cur.execute("""
                 UPDATE necesidades 
                 SET estado = 'finalizada' 
