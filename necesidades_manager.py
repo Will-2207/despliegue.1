@@ -121,10 +121,14 @@ class NecesidadesManager:
         conn = get_db_connection()
         cur = conn.cursor(cursor_factory=RealDictCursor)
         cur.execute("""
-            SELECT d.*, n.titulo as titulo_necesidad 
+            SELECT d.*, 
+                   n.titulo as titulo_necesidad, 
+                   d.cantidad as monto, 
+                   u.nombre as nombre_donante 
             FROM donaciones_fisicas d 
             JOIN necesidades n ON d.necesidad_id = n.id 
-            WHERE n.fundacion_id = %s 
+            JOIN usuarios u ON d.donante_id = u.id
+            WHERE d.fundacion_id = %s 
             ORDER BY d.created_at DESC
         """, (fundacion_id,))
         donaciones = cur.fetchall()
