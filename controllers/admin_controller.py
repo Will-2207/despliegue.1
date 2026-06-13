@@ -1,92 +1,65 @@
-from flask import render_template, redirect, url_for, flash, session, request
+from flask import render_template, request, jsonify, session, flash, redirect, url_for
 from . import admin_bp
-from models import db, Fundacion, Usuario, Donacion
+from models import db, Fundacion, Usuario, Donacion, Necesidad
 from decorators import admin_required 
 from admin_manager import AdminManager
 from email_service import EmailService
 
+# --- VISTA PRINCIPAL ---
 @admin_bp.route('/dashboard')
 @admin_required
 def dashboard():
-    metricas = AdminManager.obtener_metricas()
-    donantes = AdminManager.obtener_listado_donantes()
-    fundaciones = AdminManager.obtener_listado_fundaciones()
-    donaciones = AdminManager.obtener_listado_donaciones_completas()
-    pendientes = Fundacion.query.filter_by(estado='pendiente').all()
-    
-    return render_template('admin_dashboard.html', 
-                           metricas=metricas, 
-                           donantes=donantes,
-                           fundaciones=fundaciones,
-                           donaciones=donaciones,
-                           pendientes=pendientes)
+    # Retornamos solo la estructura base, los datos se cargan vía AJAX
+    return render_template('admin_dashboard.html', metricas=AdminManager.obtener_metricas())
 
-@admin_bp.route('/aprobar/<int:fundacion_id>', methods=['POST'])
+# --- ENDPOINTS DE CARGA DINÁMICA (AJAX) ---
+@admin_bp.route('/admin/get_<tipo>')
 @admin_required
-def aprobar(fundacion_id):
-    fundacion = Fundacion.query.get_or_404(fundacion_id)
-    fundacion.es_verificado = True
-    fundacion.estado = 'activa'
-    
-    usuario = Usuario.query.get(fundacion.usuario_id)
-    if usuario:
-        usuario.estado_validacion = 'aprobado'
+def get_data(tipo):
+    if tipo == 'donantes':
+        return render_template('partials/tabla_donantes.html', donantes=AdminManager.obtener_listado_donantes())
+    elif tipo == 'fundaciones':
+        return render_template('partials/tabla_fundaciones.html', fundaciones=AdminManager.obtener_listado_fundaciones())
+    elif tipo == 'pendientes':
+        return render_template('partials/tabla_pendientes.html', pendientes=Fundacion.query.filter_by(estado='pendiente').all())
+    elif tipo == 'donaciones':
+        return render_template('partials/tabla_donaciones.html', donaciones=AdminManager.obtener_listado_donaciones_completas())
+    elif tipo == 'pagos':
+        return render_template('partials/tabla_pagos.html', pagos=Donacion.query.all())
+    return "Módulo no encontrado", 404
+
+# --- PROCESAMIENTO CENTRALIZADO DE ACCIONES ---
+@admin_bp.route('/admin/procesar_accion', methods=['POST'])
+@admin_required
+def procesar_accion():
+    tipo = request.form.get('tipo')
+    id_afectado = request.form.get('id')
+    motivo = request.form.get('motivo')
+    detalle = request.form.get('motivo_otro')
+    motivo_final = f"{motivo} - Detalle: {detalle}" if motivo == "Otro" else motivo
+
+    try:
+        if tipo == 'rechazar_fundacion':
+            fundacion = Fundacion.query.get_or_404(id_afectado)
+            fundacion.estado = 'rechazada'
+            AdminManager.registrar_auditoria(session['user_id'], 'RECHAZAR_FUNDACION', f'Fundacion:{id_afectado}', motivo_final)
+            EmailService.enviar_notificacion(fundacion.usuario.email, fundacion.usuario.nombre, "Actualización Fundación", f"Motivo: {motivo_final}")
         
-    db.session.commit()
-    
-    AdminManager.registrar_auditoria(session['usuario_id'], 'APROBAR_FUNDACION', f'Fundacion:{fundacion_id}', 'Aprobación administrativa')
-    
-    flash("Fundación aprobada exitosamente.", "success")
-    return redirect(url_for('admin_bp.dashboard'))
+        elif tipo == 'eliminar_donante':
+            usuario = Usuario.query.get_or_404(id_afectado)
+            usuario.estado = 'suspendido'
+            AdminManager.registrar_auditoria(session['user_id'], 'ELIMINAR_DONANTE', f'Usuario:{id_afectado}', motivo_final)
+            EmailService.enviar_notificacion(usuario.email, usuario.nombre, "Notificación de cuenta", f"Motivo: {motivo_final}")
 
-@admin_bp.route('/rechazar-fundacion/<int:id>', methods=['POST'])
-@admin_required
-def rechazar_fundacion(id):
-    motivo_tipo = request.form.get('motivo_tipo', 'Otro')
-    motivo_detalle = request.form.get('motivo', '')
-    motivo_final = f"{motivo_tipo} - Detalle: {motivo_detalle}" if motivo_detalle else motivo_tipo
-    
-    fundacion = Fundacion.query.get_or_404(id)
-    fundacion.estado = 'rechazada'
-    db.session.commit()
-    
-    AdminManager.registrar_auditoria(session['usuario_id'], 'RECHAZAR_FUNDACION', f'Fundacion:{id}', motivo_final)
-    
-    # Notificación Brevo
-    EmailService.enviar_notificacion(
-        fundacion.usuario.email, fundacion.usuario.nombre, 
-        "Actualización sobre tu Fundación", 
-        f"Tu fundación ha sido rechazada. Motivo: {motivo_final}"
-    )
-    
-    flash("Fundación rechazada y donante notificado.", "info")
-    return redirect(url_for('admin_bp.dashboard'))
+        elif tipo == 'aprobar_fundacion':
+            fundacion = Fundacion.query.get_or_404(id_afectado)
+            fundacion.es_verificado = True
+            fundacion.estado = 'activa'
+            AdminManager.registrar_auditoria(session['user_id'], 'APROBAR_FUNDACION', f'Fundacion:{id_afectado}', 'Aprobación Administrativa')
+            EmailService.enviar_notificacion(fundacion.usuario.email, fundacion.usuario.nombre, "Aprobación Exitosa", "Tu fundación ha sido activada.")
 
-@admin_bp.route('/eliminar-donante/<int:donante_id>', methods=['POST'])
-@admin_required
-def eliminar_donante(donante_id):
-    # 1. Captura de motivos
-    motivo_tipo = request.form.get('motivo_tipo', 'Otro')
-    motivo_detalle = request.form.get('motivo', '')
-    motivo_final = f"{motivo_tipo} - Detalle: {motivo_detalle}" if motivo_detalle else motivo_tipo
-    
-    usuario = Usuario.query.get_or_404(donante_id)
-    
-    # 2. Lógica de suspensión
-    usuario.estado = 'suspendido'
-    db.session.commit()
-    
-    # 3. Auditoría
-    AdminManager.registrar_auditoria(
-        session['usuario_id'], 
-        'ELIMINAR_DONANTE', 
-        f'Usuario:{donante_id}', 
-        motivo_final
-    )
-    
-    # 4. Notificación Brevo
-    mensaje = f"Lamentamos informarte que tu cuenta ha sido suspendida. Motivo: {motivo_final}. Si consideras que es un error, contáctanos."
-    EmailService.enviar_notificacion(usuario.email, usuario.nombre, "Notificación de cuenta", mensaje)
-    
-    flash("Donante suspendido y notificado correctamente.", "warning")
-    return redirect(url_for('admin_bp.dashboard'))
+        db.session.commit()
+        return jsonify({"success": True, "message": "Acción ejecutada correctamente"})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"success": False, "message": str(e)}), 500

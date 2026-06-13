@@ -1,48 +1,66 @@
-from models import db, Usuario, Fundacion, Necesidad, Donacion, Auditoria
-from flask import request
+from flask import session, request
 from datetime import datetime
+from models import db, Usuario, Fundacion, Necesidad, Donacion, Auditoria
 
 class AdminManager:
     
-    # --- 1. LÓGICA DE AUDITORÍA (Seguridad) ---
+    # --- 1. AUDITORÍA Y SEGURIDAD ---
     @staticmethod
-    def registrar_auditoria(admin_id, accion, recurso_afectado, motivo=None):
-        """Registra cada acción administrativa realizada en el sistema."""
-        nueva_auditoria = Auditoria(
-            admin_id=admin_id,
+    def registrar_auditoria(recurso, accion, motivo=None):
+        """Registra toda acción administrativa con IP y timestamp."""
+        log = Auditoria(
+            admin_id=session.get('user_id'),
+            recurso_afectado=recurso,
             accion=accion,
-            recurso_afectado=recurso_afectado,
             motivo=motivo,
             ip=request.remote_addr,
             timestamp=datetime.utcnow()
         )
-        db.session.add(nueva_auditoria)
+        db.session.add(log)
         db.session.commit()
 
-    # --- 2. LÓGICA DE MÉTRICAS (Dashboard) ---
+    # --- 2. MÉTRICAS DINÁMICAS (Dashboard) ---
     @staticmethod
     def obtener_metricas():
-        """Retorna un diccionario con los contadores dinámicos."""
+        """Retorna contadores para las tarjetas del Dashboard."""
         return {
-            "total_donantes": Usuario.query.filter_by(rol='donante').count(),
-            "total_fundaciones": Fundacion.query.count(),
-            "fundaciones_pendientes": Fundacion.query.filter_by(estado='pendiente').count(),
-            "donaciones_activas": Necesidad.query.filter_by(estado='activa').count(),
-            "total_pagos": Donacion.query.count()
+            "donantes": Usuario.query.filter_by(rol='donante').count(),
+            "fundaciones": Fundacion.query.count(),
+            "pendientes": Fundacion.query.filter_by(estado='pendiente').count(),
+            "donaciones": Necesidad.query.filter_by(estado='activa').count(),
+            "pagos": Donacion.query.count()
         }
 
-    # --- 3. LÓGICA DE LISTADOS (Data tables) ---
+    # --- 3. ACCIONES CRÍTICAS (Lógica de negocio) ---
+    @staticmethod
+    def procesar_rechazo_fundacion(fundacion_id, motivo):
+        fundacion = Fundacion.query.get(fundacion_id)
+        if fundacion:
+            fundacion.estado = 'Rechazada'
+            # Aquí integrarías tu: email_service.enviar_notificacion_rechazo(...)
+            AdminManager.registrar_auditoria(f'Fundacion ID: {fundacion_id}', 'Rechazo', motivo)
+            db.session.commit()
+            return True
+        return False
+
+    @staticmethod
+    def eliminar_donante(donante_id, motivo):
+        donante = Usuario.query.get(donante_id)
+        if donante:
+            # Aquí podrías hacer un soft-delete o borrar
+            db.session.delete(donante)
+            AdminManager.registrar_auditoria(f'Donante ID: {donante_id}', 'Eliminación', motivo)
+            db.session.commit()
+            return True
+        return False
+
+    # --- 4. LISTADOS PARA TABLAS ---
     @staticmethod
     def obtener_listado_donantes():
         return Usuario.query.filter_by(rol='donante').all()
 
     @staticmethod
-    def obtener_listado_fundaciones():
-        return Fundacion.query.all()
-
-    @staticmethod
     def obtener_listado_donaciones_completas():
-        # Retorna donaciones con info relacionada para la tabla
         return db.session.query(
             Donacion, 
             Usuario.nombre.label('donante_nombre'),
