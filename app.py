@@ -23,6 +23,11 @@ required_env = ['MAIL_USERNAME', 'MAIL_PASSWORD', 'STRIPE_SECRET_KEY', 'MONGO_UR
 for var in required_env:
     if not os.getenv(var):
         print(f"¡ADVERTENCIA: La variable {var} no está configurada!")
+        
+@app.route('/debug-hash')
+def debug_hash():
+    from werkzeug.security import generate_password_hash
+    return generate_password_hash('admin123')        
 
 # Manejador global de errores
 # @app.errorhandler(Exception)
