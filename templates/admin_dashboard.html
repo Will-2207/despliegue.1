@@ -109,7 +109,7 @@
     <div class="text-center mb-3"><i class="fas fa-user-circle fa-5x text-secondary"></i></div>
     <form>
         <input class="form-control mb-2" value="{{ session.get('usuario_nombre', 'Admin') }}" readonly>
-        <a href="{{ url_for('logout') }}" class="btn btn-outline-danger w-100">Cerrar Sesión</a>
+        <a href="{{ url_for('auth_bp.logout') }}" class="btn btn-outline-danger w-100">Cerrar Sesión</a>
     </form>
   </div>
 </div>
