@@ -109,6 +109,49 @@
             }
         });
     }
+
+    // --- LÓGICA ESPECIAL PARA MODAL ELIMINAR FUNDACIÓN ---
+    function abrirModalEliminar(id, nombre) {
+        document.getElementById('nombreFundEliminar').innerText = nombre;
+        document.getElementById('modalEliminarFundacion').setAttribute('data-id', id);
+        new bootstrap.Modal(document.getElementById('modalEliminarFundacion')).show();
+    }
+
+    function seleccionarMotivoFundacion(elemento, tipo) {
+        document.querySelectorAll('.motivo-option').forEach(el => el.classList.remove('seleccionado'));
+        elemento.classList.add('seleccionado');
+        document.getElementById('motivo_fund_' + tipo).checked = true;
+        document.getElementById('campoOtrosFundacion').style.display = (tipo === 'OTROS') ? 'block' : 'none';
+        document.getElementById('errorMotivoFundacion').style.display = 'none';
+    }
+
+    document.getElementById('mensajeOtrosFundacion').addEventListener('input', function() {
+        document.getElementById('charCountFundacion').innerText = this.value.length;
+    });
+
+    function confirmarEliminarFundacion() {
+        const selected = document.querySelector('input[name="motivoElimFund"]:checked');
+        if (!selected) {
+            document.getElementById('errorMotivoFundacion').style.display = 'block';
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('tipo', 'eliminar_fundacion');
+        formData.append('id', document.getElementById('modalEliminarFundacion').getAttribute('data-id'));
+        formData.append('motivo', selected.value);
+        formData.append('motivo_otro', document.getElementById('mensajeOtrosFundacion').value);
+
+        fetch('/admin/procesar_accion', { method: 'POST', body: formData })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert("Error: " + data.message);
+            }
+        });
+    }
 </script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
