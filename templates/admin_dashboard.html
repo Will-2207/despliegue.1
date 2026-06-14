@@ -43,14 +43,55 @@
                 <p>Gestión integral de la plataforma de ayuda social.</p>
             </div>
             
-            <div class="row g-4 mb-5">
-                <div class="col-md-2" onclick="cargarSeccion('donantes')"><div class="stats-card"><h6>Donantes</h6><h3>{{ metricas.donantes }}</h3></div></div>
-                <div class="col-md-2" onclick="cargarSeccion('fundaciones')"><div class="stats-card border-success"><h6>Fundaciones</h6><h3>{{ metricas.fundaciones }}</h3></div></div>
-                <div class="col-md-2" onclick="cargarSeccion('pendientes')"><div class="stats-card border-warning"><h6>Pendientes</h6><h3>{{ metricas.pendientes }}</h3></div></div>
-                <div class="col-md-3" onclick="cargarSeccion('donaciones')"><div class="stats-card border-info"><h6>Donaciones</h6><h3>{{ metricas.donaciones }}</h3></div></div>
-                <div class="col-md-3" onclick="cargarSeccion('pagos')"><div class="stats-card border-danger"><h6>Pagos</h6><h3>{{ metricas.pagos }}</h3></div></div>
-            </div>
+            {# ══ TARJETAS DE ESTADÍSTICAS ══ #}
+<div class="row g-3 justify-content-center mb-4">
+    
+    <div class="col-xl-2 col-md-4 col-6">
+        <div class="stats-card card-donantes" onclick="cargarSeccion('donantes')">
+            <div style="font-size:2rem;">👥</div>
+            <h3 class="fw-bold mb-0">{{ metricas.donantes }}</h3>
+            <small class="text-muted fw-bold">DONANTES</small>
+        </div>
+    </div>
 
+    <div class="col-xl-2 col-md-4 col-6">
+        <div class="stats-card card-fundaciones" onclick="cargarSeccion('fundaciones')">
+            <div style="font-size:2rem;">🏛️</div>
+            <h3 class="fw-bold mb-0">{{ metricas.fundaciones }}</h3>
+            <small class="text-muted fw-bold">FUNDACIONES</small>
+        </div>
+    </div>
+
+    <div class="col-xl-2 col-md-4 col-6">
+        <div class="stats-card card-donaciones" onclick="cargarSeccion('donaciones')">
+            <div style="font-size:2rem;">📦</div>
+            <h3 class="fw-bold mb-0">{{ metricas.donaciones }}</h3>
+            <small class="text-muted fw-bold">DONACIONES</small>
+        </div>
+    </div>
+
+    <div class="col-xl-2 col-md-4 col-6">
+        <div class="stats-card card-economicas" onclick="cargarSeccion('donaciones')">
+            <div style="font-size:2rem;">💰</div>
+            <h3 class="fw-bold mb-0">$</h3>
+            <small class="text-muted fw-bold">ECONÓMICAS</small>
+        </div>
+    </div>
+
+    <div class="col-xl-2 col-md-4 col-6">
+        <div class="stats-card card-pagos" onclick="cargarSeccion('pagos')">
+            <div style="font-size:2rem;">💳</div>
+            <h3 class="fw-bold mb-0">{{ metricas.pagos }}</h3>
+            <small class="text-muted fw-bold">PAGOS</small>
+        </div>
+    </div>
+
+    <div class="col-xl-2 col-md-4 col-6">
+        <div class="stats-card card-pendientes" onclick="cargarSeccion('pendientes')">
+            <div style="font-size:2rem;">⏳</div>
+            <h3 class="fw-bold mb-0">{{ metricas.pendientes }}</h3>
+            <small class="text-muted fw-bold">PENDIENTES</small>
+        </div>
             <div class="table-responsive">
                 <div id="dinamicTable">
                     <h5 class="text-muted text-center p-5">Seleccione un módulo para visualizar información.</h5>
