@@ -6,25 +6,28 @@ class AdminManager:
     
     @staticmethod
     def registrar_auditoria(recurso_afectado, accion, motivo):
-        # 1. Obtenemos el ID de sesión
         admin_id = session.get('user_id')
         
-        # 2. SI EL ID ES NULO, FORZAMOS UN VALOR O LOGUEAMOS EL ERROR
-        # Esto evita que falle la base de datos con el error NotNullViolation
+        # Si no hay admin_id, salimos para evitar el error 500 y permitir que la acción se complete
         if admin_id is None:
-            print("ADVERTENCIA: Se intentó registrar auditoría sin sesión de admin. Usando ID 1 por defecto.")
-            admin_id = 1 # O el ID del admin principal que tengas en tu BD
+            print("AVISO: No se pudo registrar auditoría, admin_id es None.")
+            return
+
+        try:
+            log = Auditoria(
+                admin_id=admin_id,
+                recurso_afectado=recurso_afectado,
+                accion=accion,
+                motivo=motivo,
+                ip=request.remote_addr,
+                timestamp=datetime.utcnow()
+            )
+            db.session.add(log)
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            print(f"Error al registrar auditoría: {e}")
             
-        log = Auditoria(
-            admin_id=admin_id,
-            recurso_afectado=recurso_afectado,
-            accion=accion,
-            motivo=motivo,
-            ip=request.remote_addr,
-            timestamp=datetime.utcnow()
-        )
-        db.session.add(log)
-        db.session.commit()
     # --- 2. MÉTRICAS ---
     @staticmethod
     def obtener_metricas():
