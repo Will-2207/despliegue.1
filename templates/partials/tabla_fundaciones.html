@@ -1,13 +1,27 @@
-<table class="table table-hover">
+<table class="table table-hover align-middle">
     <thead class="table-light">
-        <tr><th>Fundación</th><th>Estado</th><th>NIT</th></tr>
+        <tr>
+            <th>Fundación</th>
+            <th>Email</th>
+            <th>Teléfono</th>
+            <th>NIT</th>
+            <th>Fecha Aprob.</th>
+            <th>Estado</th>
+        </tr>
     </thead>
     <tbody>
         {% for f in fundaciones %}
         <tr>
             <td>{{ f.nombre_fundacion }}</td>
-            <td><span class="badge {{ 'bg-success' if f.estado == 'activa' else 'bg-secondary' }}">{{ f.estado }}</span></td>
+            <td>{{ f.usuario.email }}</td>
+            <td>{{ f.telefono or 'N/A' }}</td>
             <td>{{ f.nit }}</td>
+            <td>{{ f.fecha_aprobacion.strftime('%Y-%m-%d') if f.fecha_aprobacion else 'N/A' }}</td>
+            <td>
+                <span class="badge {{ 'bg-success' if f.estado == 'activa' else 'bg-warning' }}">
+                    {{ f.estado }}
+                </span>
+            </td>
         </tr>
         {% endfor %}
     </tbody>

@@ -1,13 +1,25 @@
-<table class="table table-hover">
+<table class="table table-hover align-middle">
     <thead class="table-light">
-        <tr><th>ID Transacción</th><th>Monto</th><th>Fecha</th></tr>
+        <tr>
+            <th>ID Transacción</th>
+            <th>Donante</th>
+            <th>Fundación Recibe</th>
+            <th>Monto</th>
+            <th>Fecha</th>
+            <th>Estado</th>
+        </tr>
     </thead>
     <tbody>
         {% for p in pagos %}
         <tr>
             <td>{{ p.id }}</td>
-            <td>${{ p.monto }}</td>
-            <td>{{ p.fecha_creacion.strftime('%Y-%m-%d') }}</td>
+            <td>{{ p.donante_nombre or 'N/A' }}</td>
+            <td>{{ p.fundacion_nombre or 'N/A' }}</td>
+            <td><strong>${{ "{:,.0f}".format(p.monto) }}</strong></td>
+            <td>{{ p.fecha_creacion.strftime('%Y-%m-%d %H:%M') if p.fecha_creacion else 'N/A' }}</td>
+            <td>
+                <span class="badge bg-success">Completado</span>
+            </td>
         </tr>
         {% endfor %}
     </tbody>

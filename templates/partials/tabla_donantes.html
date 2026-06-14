@@ -1,14 +1,20 @@
-<table class="table table-hover">
+<table class="table table-hover align-middle">
     <thead class="table-light">
-        <tr><th>Nombre</th><th>Email</th><th>Acción</th></tr>
+        <tr><th>Nombre</th><th>Email</th><th>Teléfono</th><th>Dirección</th><th>Fecha Registro</th><th>Estado</th><th>Acción</th></tr>
     </thead>
     <tbody>
         {% for d in donantes %}
         <tr>
             <td>{{ d.nombre }}</td>
             <td>{{ d.email }}</td>
+            <td>{{ d.telefono or 'N/A' }}</td>
+            <td>{{ d.direccion or 'N/A' }}</td>
+            <td>{{ d.fecha_creacion.strftime('%Y-%m-%d') }}</td>
+            <td><span class="badge bg-{{ 'success' if d.estado == 'activo' else 'warning' }}">{{ d.estado }}</span></td>
             <td>
-                <button class="btn btn-warning btn-sm" onclick="abrirModalAccion('eliminar_donante', '{{ d.id }}')">Suspender</button>
+                <button class="btn btn-outline-danger btn-sm" onclick="abrirModalAccion('eliminar_donante', '{{ d.id }}')">
+                    <i class="fas fa-ban"></i>
+                </button>
             </td>
         </tr>
         {% endfor %}
