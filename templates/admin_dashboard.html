@@ -71,14 +71,6 @@
     </div>
 
     <div class="col-xl-2 col-md-4 col-6">
-        <div class="stats-card card-economicas" onclick="cargarSeccion('donaciones')">
-            <div style="font-size:2rem;">💰</div>
-            <h3 class="fw-bold mb-0">$</h3>
-            <small class="text-muted fw-bold">ECONÓMICAS</small>
-        </div>
-    </div>
-
-    <div class="col-xl-2 col-md-4 col-6">
         <div class="stats-card card-pagos" onclick="cargarSeccion('pagos')">
             <div style="font-size:2rem;">💳</div>
             <h3 class="fw-bold mb-0">{{ metricas.pagos }}</h3>
@@ -86,12 +78,15 @@
         </div>
     </div>
 
+
     <div class="col-xl-2 col-md-4 col-6">
         <div class="stats-card card-pendientes" onclick="cargarSeccion('pendientes')">
             <div style="font-size:2rem;">⏳</div>
             <h3 class="fw-bold mb-0">{{ metricas.pendientes }}</h3>
             <small class="text-muted fw-bold">PENDIENTES</small>
         </div>
+        </div>
+</div>
             <div class="table-responsive">
                 <div id="dinamicTable">
                     <h5 class="text-muted text-center p-5">Seleccione un módulo para visualizar información.</h5>
