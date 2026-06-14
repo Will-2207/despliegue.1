@@ -63,13 +63,14 @@ class AdminManager:
     
     @staticmethod
     def obtener_listado_donaciones_completas():
+        # Usamos .join con Usuario para llegar al email a través de la fundación
         return db.session.query(
             Donacion, 
             Usuario.nombre.label('donante_nombre'),
             Fundacion.nombre_fundacion.label('fundacion_nombre'),
-            Fundacion.email_contacto.label('fundacion_email'), # Asegúrate que este campo exista
+            Usuario.email.label('fundacion_email'), # Accedemos al email desde el usuario asociado
             Necesidad.titulo.label('necesidad_titulo'),
-            Necesidad.cantidad_solicitada.label('cantidad_necesidad') # Asegúrate que este campo exista
+            Necesidad.cantidad_solicitada.label('cantidad_necesidad')
         ).join(Usuario, Donacion.donante_id == Usuario.id)\
          .join(Necesidad, Donacion.necesidad_id == Necesidad.id)\
          .join(Fundacion, Necesidad.fundacion_id == Fundacion.id).all()
