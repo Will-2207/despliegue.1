@@ -27,21 +27,38 @@
 </head>
 <body>
 
-<div class="container-fluid">
-    <div class="row">
-        <div class="col-md-2 sidebar p-4">
-            <h5 class="text-white mb-4"><i class="fas fa-shield-alt text-success"></i> Red Solidaria</h5>
-            <button class="btn btn-sidebar w-100 mb-4" data-bs-toggle="offcanvas" data-bs-target="#offcanvasProfile">
-                <i class="fas fa-user-cog"></i> Mi Perfil
-            </button>
-            <a href="/logout" class="nav-link text-danger"><i class="fas fa-sign-out-alt"></i> Cerrar Sesión</a>
-        </div>
-
-        <div class="col-md-10 p-5">
-            <div class="header-dash">
-                <h2>Dashboard Maestro</h2>
-                <p>Gestión integral de la plataforma de ayuda social.</p>
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark px-4 shadow-sm">
+    <div class="container-fluid">
+        <a class="navbar-brand fw-bold" href="#">
+            <i class="fas fa-shield-alt text-success me-2"></i> Red Solidaria | Admin
+        </a>
+        
+        <div class="d-flex align-items-center">
+            <div class="dropdown">
+                <a href="#" class="d-flex align-items-center text-white text-decoration-none dropdown-toggle" data-bs-toggle="dropdown">
+                    <img src="https://ui-avatars.com/api/?name=Admin&background=1e52ff&color=fff" 
+                         alt="Perfil" class="rounded-circle border border-2 border-light" width="45" height="45">
+                </a>
+                <ul class="dropdown-menu dropdown-menu-end shadow mt-2">
+                    <li class="px-3 py-2 text-muted small fw-bold">ADMINISTRADOR</li>
+                    <li><a class="dropdown-item" href="#" data-bs-toggle="offcanvas" data-bs-target="#offcanvasProfile">
+                        <i class="fas fa-user-cog me-2"></i> Mi Perfil
+                    </a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item text-danger" href="/logout">
+                        <i class="fas fa-sign-out-alt me-2"></i> Cerrar Sesión
+                    </a></li>
+                </ul>
             </div>
+        </div>
+    </div>
+</nav>
+
+<div class="container-fluid p-5">
+    <div class="header-dash">
+        <h2>Dashboard Maestro</h2>
+        <p>Gestión integral de la plataforma de ayuda social.</p>
+    </div>
             
             {# ══ TARJETAS DE ESTADÍSTICAS ══ #}
 <div class="row g-3 justify-content-center mb-4">
