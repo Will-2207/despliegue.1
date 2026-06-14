@@ -4,18 +4,22 @@ from models import db, Usuario, Fundacion, Necesidad, Donacion, Auditoria
 
 class AdminManager:
     
-    # --- 1. AUDITORÍA ---
+    # --- 1. AUDITORÍA CORREGIDA ---
     @staticmethod
-    def registrar_auditoria(recurso, accion, motivo=None):
+    def registrar_auditoria(recurso_afectado, accion, motivo):
+        # Usamos session.get para evitar errores si la sesión se pierde
+        admin_id = session.get('user_id') 
         log = Auditoria(
-            admin_id=session.get('user_id'),
-            recurso_afectado=recurso,
+            admin_id=admin_id, 
+            recurso_afectado=recurso_afectado,
             accion=accion,
             motivo=motivo,
             ip=request.remote_addr,
             timestamp=datetime.utcnow()
         )
         db.session.add(log)
+        # Hacemos commit aquí solo para la auditoría, 
+        # para que quede registrada incluso si el proceso principal falla luego.
         db.session.commit()
 
     # --- 2. MÉTRICAS ---
@@ -25,36 +29,13 @@ class AdminManager:
             "donantes": Usuario.query.filter_by(rol='donante').count(),
             "fundaciones": Fundacion.query.count(),
             "pendientes": Fundacion.query.filter_by(estado='pendiente').count(),
-            "donaciones": Necesidad.query.filter_by(estado='activa').count(),
+            "donaciones": Donacion.query.count(), # Cambiado para contar donaciones reales
             "pagos": Donacion.query.count()
         }
 
-    # --- 3. ACCIONES ---
-    @staticmethod
-    def procesar_rechazo_fundacion(fundacion_id, motivo):
-        fundacion = Fundacion.query.get(fundacion_id)
-        if fundacion:
-            fundacion.estado = 'rechazada' # Usar minúscula para consistencia
-            AdminManager.registrar_auditoria(f'Fundacion ID: {fundacion_id}', 'Rechazo', motivo)
-            db.session.commit()
-            return True
-        return False
-
-    @staticmethod
-    def eliminar_donante(donante_id, motivo):
-        donante = Usuario.query.get(donante_id)
-        if donante:
-            # Soft delete o estado 'suspendido' en lugar de borrar para mantener historial
-            donante.estado = 'suspendido' 
-            AdminManager.registrar_auditoria(f'Donante ID: {donante_id}', 'Suspensión', motivo)
-            db.session.commit()
-            return True
-        return False
-
-    # --- 4. LISTADOS ENRIQUECIDOS (Data Completa) ---
+    # --- 3. LISTADOS ENRIQUECIDOS ---
     @staticmethod
     def obtener_listado_donantes():
-        # Asumiendo que Usuario tiene estos campos en tu modelo
         return Usuario.query.filter_by(rol='donante').all()
     
     @staticmethod
@@ -63,15 +44,10 @@ class AdminManager:
     
     @staticmethod
     def obtener_listado_donaciones_completas():
-        # Usamos los nombres exactos de tus modelos:
-        # Necesidad.monto_objetivo y no hay 'cantidad_solicitada'
         return db.session.query(
             Donacion, 
             Usuario.nombre.label('donante_nombre'),
             Fundacion.nombre_fundacion.label('fundacion_nombre'),
-            # Si quieres mostrar el email, debe ser el del usuario dueño de la fundación. 
-            # Nota: Asegúrate que Fundacion tenga una relación 'usuario' o 'user'
-            Fundacion.id.label('fundacion_id'), 
             Necesidad.titulo.label('necesidad_titulo'),
             Necesidad.monto_objetivo.label('cantidad_necesidad') 
         ).join(Usuario, Donacion.donante_id == Usuario.id)\

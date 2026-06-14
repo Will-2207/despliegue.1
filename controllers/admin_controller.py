@@ -42,11 +42,10 @@ def procesar_accion():
         if tipo == 'rechazar_fundacion':
             fundacion = Fundacion.query.get_or_404(id_afectado)
             fundacion.estado = 'rechazada'
-            db.session.commit() # Guardar estado antes del email
+            db.session.commit()
             AdminManager.registrar_auditoria(f'Fundacion:{id_afectado}', 'RECHAZAR', motivo_final)
-            # Solo enviar si existe el usuario relacionado
             if hasattr(fundacion, 'usuario') and fundacion.usuario:
-                EmailService.enviar_notificacion(fundacion.usuario.email, fundacion.usuario.nombre, "Actualización Fundación", f"Motivo: {motivo_final}")
+                EmailService.enviar_notificacion(fundacion.usuario.email, fundacion.usuario.nombre, "Actualización", f"Motivo: {motivo_final}")
         
         elif tipo == 'eliminar_donante':
             usuario = Usuario.query.get_or_404(id_afectado)
@@ -59,10 +58,10 @@ def procesar_accion():
             fundacion = Fundacion.query.get_or_404(id_afectado)
             fundacion.es_verificado = True
             fundacion.estado = 'activa'
-            db.session.commit() # Guardar estado antes del email
+            db.session.commit()
             AdminManager.registrar_auditoria(f'Fundacion:{id_afectado}', 'APROBAR', 'Aprobación Administrativa')
             if hasattr(fundacion, 'usuario') and fundacion.usuario:
-                EmailService.enviar_notificacion(fundacion.usuario.email, fundacion.usuario.nombre, "Aprobación Exitosa", "Tu fundación ha sido activada.")
+                EmailService.enviar_notificacion(fundacion.usuario.email, fundacion.usuario.nombre, "Aprobación", "Tu fundación ha sido activada.")
             
         else:
             return jsonify({"success": False, "message": "Acción no reconocida"}), 400
@@ -71,4 +70,4 @@ def procesar_accion():
         
     except Exception as e:
         db.session.rollback()
-        return jsonify({"success": False, "message": f"Error: {str(e)}"}), 500
+        return jsonify({"success": False, "message": f"Error interno: {str(e)}"}), 500
