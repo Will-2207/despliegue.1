@@ -49,8 +49,11 @@ class Fundacion(db.Model):
     nombre_persona_cargo = db.Column(db.String(150), nullable=False)
     descripcion = db.Column(db.Text, nullable=False)
     es_verificado = db.Column(db.Boolean, default=False)
-    estado = db.Column(db.String(20), default='pendiente') # NUEVO: Pendiente, Activa, Rechazada, Suspendida
+    estado = db.Column(db.String(20), default='pendiente')
+    # NUEVO CAMPO:
+    fecha_aprobacion = db.Column(db.DateTime, nullable=True) 
     created_at = db.Column(db.TIMESTAMP, default=datetime.utcnow)
+    
 
 class Necesidad(db.Model):
     __tablename__ = 'necesidades'

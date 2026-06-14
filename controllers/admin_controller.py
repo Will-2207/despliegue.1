@@ -58,10 +58,16 @@ def procesar_accion():
             fundacion = Fundacion.query.get_or_404(id_afectado)
             fundacion.es_verificado = True
             fundacion.estado = 'activa'
+            fundacion.fecha_aprobacion = datetime.utcnow()
             db.session.commit()
+            
             AdminManager.registrar_auditoria(f'Fundacion:{id_afectado}', 'APROBAR', 'Aprobación Administrativa')
-            if hasattr(fundacion, 'usuario') and fundacion.usuario:
-                EmailService.enviar_notificacion(fundacion.usuario.email, fundacion.usuario.nombre, "Aprobación", "Tu fundación ha sido activada.")
+            
+            try:
+                if hasattr(fundacion, 'usuario') and fundacion.usuario:
+                    EmailService.enviar_notificacion(fundacion.usuario.email, fundacion.usuario.nombre, "Aprobación", "Tu fundación ha sido activada.")
+            except Exception as e:
+                print(f"Error al enviar email: {e}") # Capturamos el error pero no rompemos el proceso
             
         else:
             return jsonify({"success": False, "message": "Acción no reconocida"}), 400
