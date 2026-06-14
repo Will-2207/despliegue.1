@@ -63,14 +63,17 @@ class AdminManager:
     
     @staticmethod
     def obtener_listado_donaciones_completas():
-        # Usamos .join con Usuario para llegar al email a través de la fundación
+        # Usamos los nombres exactos de tus modelos:
+        # Necesidad.monto_objetivo y no hay 'cantidad_solicitada'
         return db.session.query(
             Donacion, 
             Usuario.nombre.label('donante_nombre'),
             Fundacion.nombre_fundacion.label('fundacion_nombre'),
-            Usuario.email.label('fundacion_email'), # Accedemos al email desde el usuario asociado
+            # Si quieres mostrar el email, debe ser el del usuario dueño de la fundación. 
+            # Nota: Asegúrate que Fundacion tenga una relación 'usuario' o 'user'
+            Fundacion.id.label('fundacion_id'), 
             Necesidad.titulo.label('necesidad_titulo'),
-            Necesidad.cantidad_solicitada.label('cantidad_necesidad')
+            Necesidad.monto_objetivo.label('cantidad_necesidad') 
         ).join(Usuario, Donacion.donante_id == Usuario.id)\
          .join(Necesidad, Donacion.necesidad_id == Necesidad.id)\
          .join(Fundacion, Necesidad.fundacion_id == Fundacion.id).all()

@@ -1,15 +1,14 @@
 <table class="table table-hover align-middle">
     <thead class="table-light">
-        <tr><th>Donante</th><th>Fundación</th><th>Email Fundación</th><th>Causa / Necesidad</th><th>Cantidad</th></tr>
+        <tr><th>Donante</th><th>Fundación</th><th>Causa / Necesidad</th><th>Monto Objetivo</th></tr>
     </thead>
     <tbody>
         {% for item in donaciones %}
         <tr>
             <td>{{ item.donante_nombre }}</td>
             <td>{{ item.fundacion_nombre }}</td>
-            <td>{{ item.fundacion_email }}</td>
             <td>{{ item.necesidad_titulo }}</td>
-            <td><span class="badge bg-info">{{ item.cantidad_necesidad }}</span></td>
+            <td><span class="badge bg-info">${{ "{:,.0f}".format(item.cantidad_necesidad) }}</span></td>
         </tr>
         {% endfor %}
     </tbody>
