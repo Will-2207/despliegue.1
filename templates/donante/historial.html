@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Historial de Donaciones</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; }
+        .btn-volver { display: inline-block; margin-bottom: 20px; padding: 10px 15px; background: #007bff; color: white; text-decoration: none; border-radius: 5px; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+        th { background-color: #f4f4f4; }
+    </style>
+</head>
+<body>
+    <a href="/donaciones/panel-donante" class="btn-volver">← Volver al Panel</a>
+
+    <h1>Mis Donaciones</h1>
+    
+    <table>
+        <thead>
+            <tr>
+                <th>Tipo</th>
+                <th>Artículo</th>
+                <th>Fecha</th>
+                <th>Cantidad</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for d in donaciones %}
+            <tr>
+                <td>{{ d.tipo }}</td>
+                <td>{{ d.articulo }}</td>
+                <td>{{ d.fecha }}</td>
+                <td>{{ d.cantidad }}</td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="4" style="text-align: center;">No tienes donaciones registradas.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>

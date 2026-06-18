@@ -17,7 +17,7 @@
 <div class="card-form">
     <h3 class="fw-bold mb-4 text-center"><i class="fas fa-hand-holding-heart text-primary me-2"></i>Nueva Necesidad</h3>
     
-    <form method="POST" action="{{ url_for('fundacion_bp.publicar_necesidad') }}" id="form-publicar">
+    <form method="POST" action="{{ url_for('fundacion.publicar_necesidad') }}" id="form-publicar">
         
         <div class="mb-3">
             <input type="text" name="titulo" placeholder="Título de la necesidad" class="form-control" required>
@@ -62,7 +62,7 @@
         </div>
 
         <button type="submit" class="btn btn-custom w-100">Publicar Necesidad</button>
-        <a href="{{ url_for('fundacion_bp.dashboard_fundacion') }}" class="btn btn-link w-100 mt-2 text-decoration-none">Volver al panel</a>
+        <a href="{{ url_for('fundacion.dashboard_fundacion') }}" class="btn btn-link w-100 mt-2 text-decoration-none">Volver al panel</a>
     </form>
 </div>
 

@@ -2,73 +2,159 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Panel de Gestión — Fundación</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel Fundación — Red Solidaria</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        :root { --azul-solidario: #1e52ff; --verde-solidario: #28a745; }
-        body { background-color: #f4f7f6; font-family: 'Segoe UI', sans-serif; }
-
-        /* Estilo para las tarjetas (Dashboard Cards) */
-        .stats-card { 
-            background: #fff; border-radius: 16px; padding: 20px; 
-            box-shadow: 0 4px 15px rgba(0,0,0,0.08); 
-            border-left: 6px solid var(--azul-solidario);
-            transition: 0.3s; cursor: pointer;
+        :root { --azul-solidario: #1e52ff; --verde-solidario: #63ff5e; }
+        body { background-color: #f8f9fa; font-family: 'Segoe UI', sans-serif; }
+        
+        /* Sidebar a la DERECHA */
+        #sidebar {
+            position: absolute; right: 20px; top: 80px; width: 300px; background: white;
+            border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.15); padding: 25px;
+            z-index: 1000; display: none;
         }
-        .stats-card:hover { transform: translateY(-5px); }
-
-        /* Tablas con estilo limpio */
-        .table { background: white; border-radius: 15px; overflow: hidden; }
-        .thead-dark { background-color: #343a40; color: white; }
-        .badge-custom { font-size: 0.85em; padding: 5px 10px; border-radius: 8px; }
+        .header-dash { background: linear-gradient(135deg, var(--azul-solidario), #28a745); color: white; padding: 40px; border-radius: 28px; margin-bottom: 30px; text-align: center; }
+        .nav-item-custom { padding: 12px; margin-bottom: 5px; border-radius: 10px; cursor: pointer; color: #333; }
+        .nav-item-custom:hover { background: #f0f4ff; color: var(--azul-solidario); }
+        .logo-circle { width: 45px; height: 45px; border-radius: 50%; object-fit: cover; }
+        .profile-img-sidebar { width: 70px; height: 70px; border-radius: 50%; object-fit: cover; margin-bottom: 10px; }
+        
+        .donacion-card { background: #ffffff; border-radius: 16px; border: 1px solid #eef2f5; box-shadow: 0 4px 12px rgba(0,0,0,0.03); transition: transform 0.2s; }
+        .badge-categoria { background-color: #e3f2fd; color: #0d6efd; font-size: 0.75rem; padding: 5px 12px; border-radius: 30px; }
+        
+        /* Foto circular grande en encabezado */
+        .profile-img-header { width: 100px; height: 100px; border-radius: 50%; object-fit: cover; border: 4px solid rgba(255,255,255,0.8); margin-bottom: 15px; }
     </style>
 </head>
-<body class="bg-light">
+<body>
 
-<div class="container py-5">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2>Panel de Gestión: {{ fundacion.nombre_fundacion if fundacion else 'Tu Fundación' }}</h2>
-        <a href="{{ url_for('fundacion_bp.publicar_necesidad') }}" class="btn btn-success rounded-pill px-4">
-            <i class="fas fa-plus me-2"></i>Nueva Necesidad
+<nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm mb-4">
+    <div class="container d-flex justify-content-between align-items-center">
+        <a class="navbar-brand fw-bold" href="#">
+            <img src="{{ url_for('static', filename='perfil_13_Logo.jpeg') }}" class="logo-circle me-2">Red Solidaria
         </a>
-    </div> 
+        
+        <button class="btn btn-light" onclick="toggleSidebar()">
+            <i class="fas fa-bars"></i>
+        </button>
+    </div>
+</nav>
+
+<div id="sidebar">
+    <div class="text-center mb-4">
+        <img src="{{ url_for('static', filename=fundacion.foto_perfil) }}" class="profile-img-sidebar">
+        <h5 class="fw-bold">{{ fundacion.nombre_fundacion }}</h5>
+        <p class="text-muted small"><i class="fas fa-user me-1"></i> {{ fundacion.nombre_persona_cargo }}</p>
+        <p class="text-muted small"><i class="fas fa-envelope me-1"></i> {{ usuario.email }}</p>
+        <p class="text-muted small"><i class="fas fa-phone me-1"></i> {{ fundacion.telefono }}</p>
+    </div>
     
-    <div class="profile-section">
-        <i class="fas fa-user-circle me-2"></i>
-        <span><strong>Encargado de la Fundación:</strong> {{ usuario.nombre }}</span>
+    <div class="nav-item-custom" data-bs-toggle="modal" data-bs-target="#modalAdministrarCuenta">
+        <i class="fas fa-edit me-2"></i> Editar Perfil
+    </div>
+    
+    <div class="nav-item-custom" onclick="window.location.href='{{ url_for('donaciones.gestionar_donaciones') }}'">
+        <i class="fas fa-history me-2"></i> Mis Donaciones
+    </div>
+    <hr>
+    <a href="{{ url_for('auth.logout') }}" class="text-danger text-decoration-none ms-2">
+        <i class="fas fa-sign-out-alt me-2"></i> Salir
+    </a>
+</div>
+
+<div class="container py-4">
+    <div class="header-dash mx-auto" style="max-width: 900px;">
+        <img src="{{ url_for('static', filename=fundacion.foto_perfil) }}" class="profile-img-header">
+        <h2 class="fw-bold">Panel: {{ fundacion.nombre_fundacion }}</h2>
+        <p>Gestiona tus donaciones y genera reportes de impacto.</p>
     </div>
 
-    <div class="row g-4">
-        <div class="col-md-12">
-            <div class="stat-card">
-                <h4>Donaciones Recibidas</h4>
-                <table class="table mt-3">
-                    <thead>
-                        <tr>
-                            <th>Fecha</th>
-                            <th>Proyecto</th>
-                            <th>Monto</th>
-                            <th>Donante</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for d in donaciones %}
-                        <tr>
-                            <td>{{ d.created_at.strftime('%d/%m/%Y') if d.created_at else 'Sin fecha' }}</td>
-                            <td>{{ d.titulo_necesidad }}</td>
-                            <td class="text-success fw-bold">${{ "{:,.2f}".format(d.monto) }}</td>
-                            <td>{{ d.nombre_donante }}</td>
-                        </tr>
-                        {% else %}
-                        <tr><td colspan="4" class="text-center text-muted">Aún no has recibido donaciones.</td></tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
+    <div class="donacion-card p-4">
+        <table class="table table-hover">
+            <thead class="table-light">
+                <tr><th>Fecha</th><th>Donante</th><th>Monto</th><th>Estado</th></tr>
+            </thead>
+            <tbody>
+                {% for d in donaciones %}
+                <tr>
+                    <td>{{ d.created_at.strftime('%d/%m/%Y') }}</td>
+                    <td>{{ d.nombre_donante }}</td>
+                    <td class="text-success fw-bold">${{ "{:,.0f}".format(d.monto) }}</td>
+                    <td><span class="badge badge-categoria">{{ d.estado_donante }}</span></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="modal fade" id="modalAdministrarCuenta" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form action="{{ url_for('auth.editar_perfil') }}" method="POST" enctype="multipart/form-data">
+                <div class="modal-header">
+                    <h5 class="modal-title">⚙️ Editar Perfil</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <label>Nombre Fundación</label>
+                    <input type="text" name="nombre_fundacion" value="{{ fundacion.nombre_fundacion }}" class="form-control mb-3" required>
+                    
+                    <label>Nombre Encargado</label>
+                    <input type="text" name="nombre_encargado" value="{{ fundacion.nombre_persona_cargo }}" class="form-control mb-3" required>
+                    
+                    <label>Teléfono</label>
+                    <input type="text" name="telefono" value="{{ fundacion.telefono }}" class="form-control mb-3" required>
+                    
+                    <label>Email</label>
+                    <input type="email" name="email" value="{{ usuario.email }}" class="form-control mb-3" required>
+
+                    <label>Foto de Perfil</label>
+                    <input type="file" name="foto_perfil" class="form-control" accept="image/*">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    // Tu función original para el menú lateral
+    function toggleSidebar() {
+        const sidebar = document.getElementById('sidebar');
+        sidebar.style.display = (sidebar.style.display === 'block') ? 'none' : 'block';
+    }
+
+    // Nueva función para cargar las tablas sin recargar la página (AJAX)
+    function cargarSeccion(tipo) {
+        document.getElementById('dinamicTable').innerHTML = '<div class="text-center p-5"><div class="spinner-border text-primary"></div></div>';
+        
+        // El fetch ahora apunta a la ruta correcta corregida
+        fetch(`/get_${tipo}`) 
+        .then(res => res.text())
+        .then(html => {
+            document.getElementById('dinamicTable').innerHTML = html;
+        })
+        .catch(err => {
+            document.getElementById('dinamicTable').innerHTML = '<p class="text-danger text-center">Error al cargar datos.</p>';
+        });
+    }
+
+    // Mantén las otras funciones que ya tenías para el modal y acciones
+    function handleSidebarClick(tipo) {
+        // Si usas un offcanvas de Bootstrap, este código es correcto
+        const sidebarElement = document.getElementById('sidebarAdmin');
+        const bsOffcanvas = bootstrap.Offcanvas.getInstance(sidebarElement);
+        if (bsOffcanvas) bsOffcanvas.hide();
+        cargarSeccion(tipo);
+    }
+</script>
 </body>
 </html>

@@ -1,15 +1,14 @@
 import stripe
 import os
-from database import get_db_connection
 from datetime import datetime
 from pymongo import MongoClient
+from models.models import db, Transaccion # Asegúrate de que este modelo exista en models.py
 
 stripe.api_key = os.getenv('STRIPE_SECRET_KEY')
 
 class PaymentManager:
     @staticmethod
     def get_mongo_db():
-        # Usa serverSelectionTimeoutMS para que no se quede colgado si Mongo falla
         client = MongoClient(os.getenv('MONGO_URI'), connect=False, serverSelectionTimeoutMS=5000)
         return client['prueba1']
 
@@ -29,31 +28,30 @@ class PaymentManager:
             marca = method.card.brand
             monto = intent.amount_received / 100
 
-            # 2. Guardar en PostgreSQL
-            conn = get_db_connection()
-            cur = conn.cursor()
-            cur.execute("""
-                INSERT INTO transacciones (usuario_id, monto, metodo_pago, ultimos_cuatro, transaccion_token, created_at) 
-                VALUES (%s, %s, %s, %s, %s, %s)
-            """, (usuario_id, monto, marca, ultimos_cuatro, session_id, datetime.utcnow()))
-            conn.commit()
-            cur.close()
-            conn.close()
+            # 2. Guardar en PostgreSQL usando SQLAlchemy
+            nueva_transaccion = Transaccion(
+                usuario_id=usuario_id,
+                monto=monto,
+                metodo_pago=marca,
+                ultimos_cuatro=ultimos_cuatro,
+                transaccion_token=session_id,
+                created_at=datetime.utcnow()
+            )
+            db.session.add(nueva_transaccion)
+            db.session.commit()
 
-            # 3. Guardar en MongoDB
-            db = PaymentManager.get_mongo_db()
-            print(f"DEBUG: Intentando insertar en MongoDB: {db.name}")
-            
-            db.donaciones.insert_one({
+            # 3. Guardar en MongoDB (esto se mantiene igual)
+            db_mongo = PaymentManager.get_mongo_db()
+            db_mongo.donaciones.insert_one({
                 'usuario_id': int(usuario_id),
                 'monto': float(monto),
                 'metodo': marca,
                 'ultimos_cuatro': ultimos_cuatro,
                 'fecha': datetime.utcnow()
             })
-            print("DEBUG: Inserción en MongoDB exitosa")
             
             return True
         except Exception as e:
+            db.session.rollback() # Limpiamos en caso de error en Postgres
             print(f"Error crítico en PaymentManager: {e}")
             return False

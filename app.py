@@ -1,48 +1,62 @@
-from flask import Flask, render_template, session, redirect, url_for
-from database import get_db_connection
-from controllers import auth_bp, donaciones_bp, fundacion_bp
-from controllers import auth_bp, donaciones_bp, fundacion_bp, admin_bp
-from models import db  # <--- IMPORTANTE: Importar db
 import os
-from dotenv import load_dotenv
 import stripe
+from flask import Flask
+from dotenv import load_dotenv
+from flask_migrate import Migrate
+from pymongo import MongoClient
+from models.models import db
 
+# 1. Cargar variables de entorno
 load_dotenv()
 
+# 2. Inicializar App
 app = Flask(__name__)
 
-# Configuración de SQLAlchemy
-app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-
-# Inicializar SQLAlchemy con la app
-db.init_app(app)
-
-# Configuración de seguridad
+# Configuración de Seguridad
 app.secret_key = os.getenv('SECRET_KEY', 'una_clave_muy_segura_y_larga_12345')
 stripe.api_key = os.getenv('STRIPE_SECRET_KEY')
 
-# Registro de Blueprints (Controladores)
-app.register_blueprint(auth_bp)
-app.register_blueprint(donaciones_bp)
-app.register_blueprint(fundacion_bp)
-app.register_blueprint(admin_bp)
+# Configuración Postgres (SQLAlchemy)
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-# Validación de variables de entorno
-required_env = ['MAIL_USERNAME', 'MAIL_PASSWORD', 'STRIPE_SECRET_KEY', 'MONGO_URI', 'DATABASE_URL']
-for var in required_env:
-    if not os.getenv(var):
-        print(f"¡ADVERTENCIA: La variable {var} no está configurada!")
+# Configuración Mongo (PyMongo)
+mongo_uri = os.getenv('MONGO_URI')
+if mongo_uri:
+    try:
+        app.mongo_client = MongoClient(mongo_uri)
+        app.db_mongo = app.mongo_client.get_default_database()
+    except Exception as e:
+        app.logger.error(f"Error conectando a MongoDB: {e}")
+        app.db_mongo = None
+else:
+    app.db_mongo = None
 
-# Crear las tablas al iniciar la aplicación (solo una vez)
+# Inicialización de extensiones
+db.init_app(app)
+migrate = Migrate(app, db)
+
+# Crear tablas automáticamente
 with app.app_context():
     db.create_all()
-        
-@app.route('/debug-hash')
-def debug_hash():
-    from werkzeug.security import generate_password_hash
-    return generate_password_hash('admin123')        
+
+# 3. Importar y Registrar Controladores (Blueprints)
+from controllers.auth_controller import auth_bp
+from controllers.donaciones_controller import donaciones_bp
+from controllers.fundacion_controller import fundacion_bp
+from controllers.admin_controller import admin_bp
+
+app.register_blueprint(auth_bp, url_prefix='/')
+app.register_blueprint(donaciones_bp, url_prefix='/donaciones')
+app.register_blueprint(fundacion_bp, url_prefix='/fundacion')
+app.register_blueprint(admin_bp, url_prefix='/admin')
+
+# 4. Health Check para Render
+@app.route('/health')
+def health_check():
+    return {"status": "ok", "message": "Red Solidaria online"}, 200
 
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port)
+    # Usar el puerto 5001 para local, Render usará la variable de entorno $PORT
+    port = int(os.environ.get('PORT', 5001))
+    app.run(host='0.0.0.0', port=port, debug=False)

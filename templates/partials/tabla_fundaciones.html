@@ -5,21 +5,36 @@
             <th>Email</th>
             <th>Teléfono</th>
             <th>NIT</th>
-            <th>Fecha Aprob.</th>
+            <th>Fecha Registro</th>
             <th>Estado</th>
         </tr>
     </thead>
     <tbody>
         {% for f in fundaciones %}
         <tr>
-            <td>{{ f.nombre_fundacion }}</td>
-            <td>{{ f.usuario.email }}</td>
-            <td>{{ f.telefono or 'N/A' }}</td>
-            <td>{{ f.nit }}</td>
-            <td>{{ f.fecha_aprobacion.strftime('%Y-%m-%d') if f.fecha_aprobacion else 'N/A' }}</td>
+            <td>{{ f.nombre_fundacion | default('Sin nombre') }}</td>
+            
+            {# Verifica si el usuario existe y tiene email #}
+            <td>{{ f.usuario.email if f.usuario and f.usuario.email else 'N/A' }}</td>
+            
+            {# Verifica si telefono tiene contenido real #}
+            <td>{{ f.telefono if f.telefono and f.telefono|string|trim != '' else 'N/A' }}</td>
+            
+            {# Verifica si nit tiene contenido real #}
+            <td>
+                    {% if f.nit and f.nit|string|trim != '' and f.nit|string|lower != 'none' %}
+                        {{ f.nit }}
+                    {% else %}
+                        <span class="text-muted">Sin NIT</span>
+                    {% endif %}
+                </td>
+            
+            {# Formato de fecha seguro #}
+            <td>{{ f.created_at.strftime('%Y-%m-%d') if f.created_at else 'N/A' }}</td>
+            
             <td>
                 <span class="badge {{ 'bg-success' if f.estado == 'activa' else 'bg-warning' }}">
-                    {{ f.estado }}
+                    {{ f.estado | default('Pendiente') | title }}
                 </span>
             </td>
         </tr>

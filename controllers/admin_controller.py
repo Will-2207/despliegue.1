@@ -1,108 +1,80 @@
-from flask import render_template, request, jsonify, session
-from datetime import datetime
-from . import admin_bp
-from models import db, Fundacion, Usuario, Donacion, Necesidad
-from decorators import admin_required 
-from admin_manager import AdminManager
-from email_service import EmailService
+from flask import jsonify, render_template, request
 
-# Definimos los motivos de eliminación aquí para tenerlos centralizados
+from controllers import admin_bp
+from decorators import admin_required
+from models.admin_manager import AdminManager
+
+
 MOTIVOS_ELIMINACION = {
-    "INCUMPLIMIENTO": "Incumplimiento de términos y condiciones",
+    "INCUMPLIMIENTO": "Incumplimiento de terminos y condiciones",
     "ACTIVIDAD_SOSPECHOSA": "Actividad sospechosa o fraudulenta",
     "SOLICITUD_BAJA": "Solicitud voluntaria de baja",
-    "DOCUMENTACION_INVALIDA": "Documentación legal inválida o vencida"
+    "DOCUMENTACION_INVALIDA": "Documentacion legal invalida o vencida"
 }
 
-# --- VISTA PRINCIPAL ---
+
 @admin_bp.route('/dashboard')
 @admin_required
 def dashboard():
     return render_template('admin_dashboard.html', metricas=AdminManager.obtener_metricas())
 
-# --- ENDPOINTS DE CARGA DINÁMICA ---
-@admin_bp.route('/admin/get_<tipo>')
+
+@admin_bp.route('/get_<tipo>')
 @admin_required
 def get_data(tipo):
     if tipo == 'donantes':
-        return render_template('partials/tabla_donantes.html', donantes=AdminManager.obtener_listado_donantes())
-    
-    elif tipo == 'fundaciones':
-        return render_template('partials/tabla_fundaciones.html', 
-                               fundaciones=AdminManager.obtener_listado_fundaciones(),
-                               motivos_eliminacion=MOTIVOS_ELIMINACION)
-    
-    elif tipo == 'pendientes':
-        return render_template('partials/tabla_pendientes.html', 
-                               pendientes=Fundacion.query.filter_by(estado='pendiente').all(),
-                               motivos_eliminacion=MOTIVOS_ELIMINACION)
-    
-    elif tipo == 'donaciones':
-        return render_template('partials/tabla_donaciones.html', donaciones=AdminManager.obtener_listado_donaciones_completas())
-    elif tipo == 'pagos':
-        return render_template('partials/tabla_pagos.html', pagos=Donacion.query.all())
-    return jsonify({"error": "Módulo no encontrado"}), 404
+        return render_template(
+            'partials/tabla_donantes.html',
+            donantes=AdminManager.obtener_listado_donantes()
+        )
 
-# --- PROCESAMIENTO CENTRALIZADO ---
-@admin_bp.route('/admin/procesar_accion', methods=['POST'])
+    if tipo == 'fundaciones':
+        return render_template(
+            'partials/tabla_fundaciones.html',
+            fundaciones=AdminManager.obtener_listado_fundaciones(),
+            motivos_eliminacion=MOTIVOS_ELIMINACION
+        )
+
+    if tipo == 'pendientes':
+        return render_template(
+            'partials/tabla_pendientes.html',
+            pendientes=AdminManager.obtener_fundaciones_pendientes(),
+            motivos_eliminacion=MOTIVOS_ELIMINACION
+        )
+
+    if tipo == 'donaciones':
+        return render_template(
+            'partials/tabla_donaciones.html',
+            donaciones=AdminManager.obtener_listado_donaciones_completas()
+        )
+
+    if tipo == 'pagos':
+        return render_template(
+            'partials/tabla_pagos.html',
+            pagos=AdminManager.obtener_pagos()
+        )
+
+    return jsonify({"error": "Modulo no encontrado"}), 404
+
+
+@admin_bp.route('/procesar_accion', methods=['POST'])
 @admin_required
 def procesar_accion():
     tipo = request.form.get('tipo')
-    id_afectado = request.form.get('id')
-    motivo = request.form.get('motivo', 'Sin motivo')
-    detalle = request.form.get('motivo_otro', '')
-    motivo_final = f"{motivo} - {detalle}" if detalle else motivo
-    
-    admin_id = session.get('user_id')
+    id_af = request.form.get('id')
+    motivo_seleccionado = request.form.get('motivo', '')
+    motivo_otro = request.form.get('motivo_otro', '')
+    motivo = f"{motivo_seleccionado} - {motivo_otro}".strip(" -")
 
-    try:
-        # --- NUEVA LÓGICA: ELIMINAR FUNDACIÓN ---
-        if tipo == 'eliminar_fundacion':
-            fundacion = Fundacion.query.get_or_404(id_afectado)
-            fundacion.estado = 'suspendida'
-            db.session.commit()
-            if admin_id:
-                AdminManager.registrar_auditoria(f'Fundacion:{id_afectado}', 'ELIMINAR', motivo_final)
-            if hasattr(fundacion, 'usuario') and fundacion.usuario:
-                EmailService.enviar_notificacion(fundacion.usuario.email, fundacion.usuario.nombre, "Notificación", f"Motivo: {motivo_final}")
+    mapping = {
+        'aprobar_fundacion': 'activa',
+        'rechazar_fundacion': 'rechazada',
+        'eliminar_fundacion': 'suspendida'
+    }
 
-        elif tipo == 'rechazar_fundacion':
-            fundacion = Fundacion.query.get_or_404(id_afectado)
-            fundacion.estado = 'rechazada'
-            db.session.commit()
-            if admin_id:
-                AdminManager.registrar_auditoria(f'Fundacion:{id_afectado}', 'RECHAZAR', motivo_final)
-            if hasattr(fundacion, 'usuario') and fundacion.usuario:
-                EmailService.enviar_notificacion(fundacion.usuario.email, fundacion.usuario.nombre, "Actualización", f"Motivo: {motivo_final}")
-        
-        elif tipo == 'eliminar_donante':
-            usuario = Usuario.query.get_or_404(id_afectado)
-            usuario.estado = 'suspendido'
-            db.session.commit()
-            if admin_id:
-                AdminManager.registrar_auditoria(f'Usuario:{id_afectado}', 'ELIMINAR', motivo_final)
-            EmailService.enviar_notificacion(usuario.email, usuario.nombre, "Notificación", f"Motivo: {motivo_final}")
+    if tipo not in mapping:
+        return jsonify({"success": False, "message": "Accion no reconocida"}), 400
 
-        elif tipo == 'aprobar_fundacion':
-            fundacion = Fundacion.query.get_or_404(id_afectado)
-            fundacion.es_verificado = True
-            fundacion.estado = 'activa'
-            fundacion.fecha_aprobacion = datetime.utcnow()
-            db.session.commit()
-            if admin_id:
-                AdminManager.registrar_auditoria(f'Fundacion:{id_afectado}', 'APROBAR', 'Aprobación Administrativa')
-            try:
-                if hasattr(fundacion, 'usuario') and fundacion.usuario:
-                    EmailService.enviar_notificacion(fundacion.usuario.email, fundacion.usuario.nombre, "Aprobación", "Tu fundación ha sido activada.")
-            except Exception as e:
-                print(f"Error al enviar email: {e}")
-            
-        else:
-            return jsonify({"success": False, "message": "Acción no reconocida"}), 400
-
-        return jsonify({"success": True, "message": "Acción procesada correctamente"})
-        
-    except Exception as e:
-        db.session.rollback()
-        print(f"Error completo en procesar_accion: {str(e)}")
-        return jsonify({"success": False, "message": f"Error interno: {str(e)}"}), 500
+    exito, mensaje = AdminManager.validar_fundacion(id_af, mapping[tipo], motivo)
+    status_code = 200 if exito else 400
+    return jsonify({"success": exito, "message": mensaje}), status_code

@@ -1,73 +1,92 @@
-from flask import render_template, request, redirect, url_for, flash, session
-from . import auth_bp
-from auth import AuthManager # Ajusta el import si tu archivo se llama distinto
+from functools import wraps
+
+from flask import Blueprint, current_app, flash, redirect, render_template, request, session, url_for
+
+from services.auth_service import AuthService
+
+
+auth_bp = Blueprint('auth', __name__)
+
+
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'usuario_id' not in session:
+            return redirect(url_for('auth.login'))
+        return f(*args, **kwargs)
+    return decorated_function
+
+
+def redirect_user(rol):
+    if rol == 'admin':
+        return redirect(url_for('admin.dashboard'))
+    if rol == 'fundacion':
+        if not AuthService.fundacion_activa(session.get('usuario_id')):
+            session.clear()
+            flash("Tu fundacion aun no esta aprobada para ingresar.", "warning")
+            return redirect(url_for('auth.login'))
+        return redirect(url_for('fundacion.dashboard_fundacion'))
+    return redirect(url_for('donaciones.inicio_donante'))
+
 
 @auth_bp.route('/', methods=['GET', 'POST'])
 def login():
-    # Si ya está logueado, redirigir según su rol
-    if 'usuario_id' in session: 
-        if session.get('rol') == 'admin':
-            # CORRECCIÓN: Redirigir al panel de administrador real
-            return redirect(url_for('admin_bp.dashboard'))
-        return redirect(url_for('donaciones_bp.donante'))
-        
+    if 'usuario_id' in session:
+        return redirect_user(session.get('rol'))
+
     error = None
     if request.method == 'POST':
         email = request.form.get('email')
         password = request.form.get('pass')
-        
-        user = AuthManager.verificar_login(email, password)
-        if user:
-            # CORRECCIÓN CRÍTICA: Usar sintaxis de objeto (user.id) y no diccionario (user['id'])
-            session['usuario_id'] = user.id
-            session['usuario_nombre'] = user.nombre
-            session['rol'] = user.rol
-            
-            # Redirección según rol corregida
-            if user.rol == 'admin':
-                return redirect(url_for('admin_bp.dashboard'))
-            
-            return redirect(url_for('donaciones_bp.donante'))
-            
-        # Mensaje ajustado para que cubra contraseñas malas o falta de aprobación
-        error = "Credenciales incorrectas o cuenta pendiente de aprobación."
-        
+
+        exito, mensaje, usuario = AuthService.autenticar_usuario(email, password)
+
+        if exito:
+            session['usuario_id'] = usuario.id
+            session['usuario_nombre'] = usuario.nombre
+            session['usuario_email'] = usuario.email
+            session['rol'] = usuario.rol
+            return redirect_user(usuario.rol)
+
+        error = mensaje
+
     return render_template('login.html', error=error)
+
 
 @auth_bp.route('/registro', methods=['GET', 'POST'])
 def registro():
-    error = None
     if request.method == 'POST':
-        try:
-            nombre = request.form.get('nombre')
-            email = request.form.get('email')
-            password = request.form.get('pass')
-            direccion = request.form.get('direccion')
-            telefono = request.form.get('telefono')
-            tipo = request.form.get('tipo_persona')
-            
-            datos_fundacion = None
-            if tipo == 'juridica':
-                datos_fundacion = {
-                    'nit': request.form.get('nit'),
-                    'nombre_fundacion': request.form.get('nombre_fundacion'),
-                    'nombre_persona_cargo': nombre,
-                    'descripcion': request.form.get('descripcion')
-                }
+        exito, mensaje = AuthService.registrar_usuario(request.form)
+        flash(mensaje, 'success' if exito else 'danger')
 
-            # Llamamos al AuthManager que ya está en SQLAlchemy
-            if AuthManager.registrar_usuario(nombre, email, password, direccion, telefono, tipo, datos_fundacion):
-                flash('Registro exitoso, ahora puedes iniciar sesión.', 'success')
-                return redirect(url_for('auth_bp.login'))
-            error = "El correo ya está registrado o faltan datos."
-        except Exception as e:
-            error = f"Error: {str(e)}"
-            
-    return render_template('registro.html', error=error)
+        if exito:
+            return redirect(url_for('auth.login'))
+
+        return render_template('registro.html')
+
+    return render_template('registro.html')
+
 
 @auth_bp.route('/logout')
 def logout():
-    # Limpiamos la sesión completamente
     session.clear()
-    flash("Has cerrado sesión exitosamente.", "info")
-    return redirect(url_for('auth_bp.login'))
+    flash("Has cerrado sesion exitosamente.", "info")
+    return redirect(url_for('auth.login'))
+
+
+@auth_bp.route('/editar-perfil', methods=['POST'])
+@login_required
+def editar_perfil():
+    exito, mensaje, nombre_sesion = AuthService.actualizar_perfil_fundacion(
+        session.get('usuario_id'),
+        request.form,
+        request.files,
+        current_app.root_path
+    )
+
+    flash(mensaje, 'success' if exito else 'danger')
+
+    if exito and nombre_sesion:
+        session['usuario_nombre'] = nombre_sesion
+
+    return redirect(url_for('fundacion.dashboard_fundacion'))

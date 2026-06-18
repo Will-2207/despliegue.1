@@ -1,20 +1,32 @@
 <table class="table table-hover align-middle">
     <thead class="table-light">
-        <tr><th>Nombre</th><th>Email</th><th>Teléfono</th><th>Dirección</th><th>Fecha Registro</th><th>Estado</th><th>Acción</th></tr>
+        <tr>
+            <th>Nombre</th>
+            <th>Email</th>
+            <th>Teléfono</th>
+            <th>Dirección</th>
+            <th>Fecha Registro</th>
+            <th>Estado</th>
+        </tr>
     </thead>
     <tbody>
         {% for d in donantes %}
         <tr>
-            <td>{{ d.nombre }}</td>
-            <td>{{ d.email }}</td>
-            <td>{{ d.telefono or 'N/A' }}</td>
-            <td>{{ d.direccion or 'N/A' }}</td>
-            <td>{{ d.fecha_creacion.strftime('%Y-%m-%d') }}</td>
-            <td><span class="badge bg-{{ 'success' if d.estado == 'activo' else 'warning' }}">{{ d.estado }}</span></td>
+            <td>{{ d.nombre | default('N/A') }}</td>
+            <td>{{ d.email | default('N/A') }}</td>
+            <td>{{ d.telefono if d.telefono and d.telefono != '' else 'No registrado' }}</td>
+            <td>{{ d.direccion if d.direccion and d.direccion != '' else 'N/A' }}</td>
+            
             <td>
-                <button class="btn btn-outline-danger btn-sm" onclick="abrirModalAccion('eliminar_donante', '{{ d.id }}')">
-                    <i class="fas fa-ban"></i>
-                </button>
+                {% if d.fecha_creacion %}{{ d.fecha_creacion.strftime('%Y-%m-%d') }}
+                {% elif d.created_at %}{{ d.created_at.strftime('%Y-%m-%d') }}
+                {% else %}N/A{% endif %}
+            </td>
+            
+            <td>
+                <span class="badge {{ 'bg-success' if (d.estado == 'activo' or d.estado == None) else 'bg-warning' }}">
+                    {{ d.estado | default('activo') | title }}
+                </span>
             </td>
         </tr>
         {% endfor %}
