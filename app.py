@@ -24,6 +24,16 @@ app.config['STRIPE_SECRET_KEY'] = os.getenv('STRIPE_SECRET_KEY')
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
+# --- CONFIGURACIÓN DE ESTABILIDAD DE BASE DE DATOS ---
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+    "pool_pre_ping": True,         # Vital para reconectar ante micro-cortes
+    "pool_recycle": 300,           # Recicla la conexión cada 5 minutos
+    "pool_timeout": 30,            # Espera 30 segundos antes de rendirse
+    "connect_args": {
+        "sslmode": "require"       # Fuerza conexión segura
+    }
+}
+
 # Configuración Mongo (PyMongo)
 mongo_uri = os.getenv('MONGO_URI')
 if mongo_uri:

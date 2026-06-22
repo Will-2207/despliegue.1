@@ -13,36 +13,38 @@ import stripe
 @login_required
 def inicio_donante():
     usuario_id = session.get('usuario_id')
+    
+    # Inicialización de seguridad para evitar UnboundLocalError
+    user_db = None
+    donante = {'foto_perfil': 'default.png', 'nombre': session.get('usuario_nombre', 'Donante'), 'email': session.get('usuario_email', ''), 'telefono': '', 'direccion': ''}
+    necesidades = []
+    donaciones = []
+    stats = {'pendientes': 0, 'recibidas': 0, 'rechazadas': 0, 'alimentos': 0, 'ropa': 0, 'otros': 0, 'monetarias': 0, 'total_combinado': 0}
 
-    # ── Filtros del formulario multicriterio (Mi Trazabilidad y Aportes) ──
+    # Filtros del formulario multicriterio
     q_filtro = request.args.get('q', '').strip() or None
     categoria_filtro = request.args.get('categoria', '').strip() or None
     estado_filtro = request.args.get('est', '').strip() or None
 
     try:
-        from models.models import Usuario
+        from models.models import Usuario, DonacionFisica, DonacionMonetaria
+        
+        # Intentar obtener usuario
         user_db = Usuario.query.get(usuario_id)
         
-        # 1. Traemos los datos del donante usando el servicio unificado (Ya funciona porque usa el import global)
-        donante = DonacionService.obtener_donante_por_id(usuario_id)
-        if not donante:
-            donante = {
-                'foto_perfil': 'default.png', 
-                'nombre': session.get('usuario_nombre', 'Donante'), 
-                'email': session.get('usuario_email', ''), 
-                'telefono': '', 
-                'direccion': ''
-            }
+        # 1. Datos del donante
+        donante_data = DonacionService.obtener_donante_por_id(usuario_id)
+        if donante_data:
+            donante = donante_data
 
-        # 2. Catálogo: SE ELIMINÓ EL IMPORT DUPLICADO QUE CAUSABA EL ERROR
+        # 2. Catálogo
         necesidades = DonacionService.obtener_necesidades_activas()
 
-        # 3. Historial de impacto (Mantenemos tus consultas para las estadísticas específicas)
-        from models.models import DonacionFisica, DonacionMonetaria
+        # 3. Historial de impacto
         donaciones_fisicas = DonacionFisica.query.filter_by(donante_id=usuario_id).all()
         donaciones_monetarias = DonacionMonetaria.query.filter_by(usuario_id=usuario_id).all()
 
-        # 4. Cálculo de Estadísticas robustas con protección de ceros
+        # 4. Estadísticas
         stats = {
             'pendientes': sum(1 for d in donaciones_fisicas if d.estado == 'pendiente'),
             'recibidas': sum(1 for d in donaciones_fisicas if d.estado in ['recibida', 'completada', 'entregada']),
@@ -54,10 +56,7 @@ def inicio_donante():
             'total_combinado': len(donaciones_fisicas) + len(donaciones_monetarias)
         }
 
-        # 5. Tabla de trazabilidad inferior: aplica los filtros multicriterio
-        # (q, categoria, est) leídos desde la URL. ESTA es la variable real
-        # que donante.html consume ({% for d in donaciones %}) -- NUNCA usar
-        # 'historial' como nombre, esa variable no existe en la plantilla.
+        # 5. Tabla de trazabilidad
         donaciones = DonacionService.obtener_donaciones_filtradas(
             usuario_id=usuario_id,
             q=q_filtro,
@@ -66,18 +65,8 @@ def inicio_donante():
         )
 
     except Exception as e:
-        print(f"Error cargando panel donante optimizado: {e}")
-        donante = {
-            'foto_perfil': 'default.png', 
-            'nombre': session.get('usuario_nombre', 'Donante'), 
-            'email': session.get('usuario_email', ''), 
-            'telefono': '', 
-            'direccion': ''
-        }
-        necesidades = []
-        donaciones = []
-        stats = {'pendientes': 0, 'recibidas': 0, 'rechazadas': 0, 'alimentos': 0, 'ropa': 0, 'otros': 0, 'monetarias': 0, 'total_combinado': 0}
-        flash("No fue posible sincronizar el panel de impacto en este momento.", "danger")
+        print(f"Error cargando panel donante: {e}")
+        flash("Hubo un problema al cargar algunos datos del panel.", "warning")
 
     return render_template(
         'donante.html',
