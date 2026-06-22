@@ -35,6 +35,9 @@ class DonacionModel:
     @staticmethod
     def registrar_donacion_monetaria(usuario_id, necesidad_id, monto, stripe_id, brand, last4, email):
         try:
+            # 1. Traemos la necesidad afectada para sumarle el recaudo de una vez
+            necesidad = Necesidad.query.get(necesidad_id)
+            
             nueva = DonacionMonetaria(
                 usuario_id=usuario_id,
                 necesidad_id=necesidad_id,
@@ -45,6 +48,14 @@ class DonacionModel:
                 email_donante=email
             )
             db.session.add(nueva)
+
+            # 2. Si la necesidad existe, le sumamos el monto recaudado
+            if necesidad:
+                necesidad.cantidad_comprometida = (necesidad.cantidad_comprometida or 0) + int(float(monto))
+                # Si llegó a la meta, la marcamos como finalizada
+                if necesidad.cantidad_comprometida >= necesidad.cantidad_requerida:
+                    necesidad.estado = 'finalizada'
+
             db.session.commit()
             return True
         except Exception as e:

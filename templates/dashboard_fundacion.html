@@ -7,117 +7,485 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        :root { --azul-solidario: #1e52ff; --verde-solidario: #63ff5e; }
+        :root { 
+            --azul-solidario: #1e52ff; 
+            --verde-solidario: #63ff5e; 
+        }
         body { background-color: #f8f9fa; font-family: 'Segoe UI', sans-serif; }
         
-        /* Sidebar a la DERECHA */
         #sidebar {
-            position: absolute; right: 20px; top: 80px; width: 300px; background: white;
+            position: fixed; right: 20px; top: 80px; width: 320px; background: white;
             border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.15); padding: 25px;
-            z-index: 1000; display: none;
+            z-index: 1050; display: none;
         }
-        .header-dash { background: linear-gradient(135deg, var(--azul-solidario), #28a745); color: white; padding: 40px; border-radius: 28px; margin-bottom: 30px; text-align: center; }
-        .nav-item-custom { padding: 12px; margin-bottom: 5px; border-radius: 10px; cursor: pointer; color: #333; }
+        
+        .header-dash { 
+            background: linear-gradient(135deg, var(--azul-solidario), #28a745); 
+            color: white; padding: 40px; border-radius: 28px; margin-bottom: 30px; text-align: center; 
+        }
+        
+        .nav-item-custom { padding: 12px; margin-bottom: 5px; border-radius: 10px; cursor: pointer; color: #333; transition: all 0.2s; }
         .nav-item-custom:hover { background: #f0f4ff; color: var(--azul-solidario); }
         .logo-circle { width: 45px; height: 45px; border-radius: 50%; object-fit: cover; }
-        .profile-img-sidebar { width: 70px; height: 70px; border-radius: 50%; object-fit: cover; margin-bottom: 10px; }
+        .profile-img-sidebar { width: 70px; height: 70px; border-radius: 50%; object-fit: cover; margin-bottom: 10px; border: 2px solid #eef2f5; }
         
+        .panel-section { border-radius: 15px; padding: 25px; background: #ffffff; }
         .donacion-card { background: #ffffff; border-radius: 16px; border: 1px solid #eef2f5; box-shadow: 0 4px 12px rgba(0,0,0,0.03); transition: transform 0.2s; }
         .badge-categoria { background-color: #e3f2fd; color: #0d6efd; font-size: 0.75rem; padding: 5px 12px; border-radius: 30px; }
-        
-        /* Foto circular grande en encabezado */
         .profile-img-header { width: 100px; height: 100px; border-radius: 50%; object-fit: cover; border: 4px solid rgba(255,255,255,0.8); margin-bottom: 15px; }
+        
+        .stats-lateral { background: white; border-radius: 15px; padding: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.02); border: 1px solid #eef2f5; }
+        .stats-lateral-header { font-weight: bold; padding: 8px 12px; color: white; background: var(--azul-solidario); border-radius: 8px; margin-bottom: 10px; font-size: 0.9rem; }
+        .stats-item { display: flex; justify-content: space-between; padding: 6px 12px; border-bottom: 1px solid #f1f1f1; font-size: 0.88rem; }
+        .stats-num { font-weight: bold; }
+        
+        .modalFotoOverlay { position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:2000; display:none; align-items:center; justify-content:center; }
+        .modalFotoOverlay.activo { display: flex; }
+        .modal-content-img { max-width: 90%; max-height: 85%; border-radius: 8px; }
+        .btn-cerrar-foto { position: absolute; top: 20px; right: 30px; color: white; font-size: 2.5rem; background: none; border: none; cursor: pointer; }
     </style>
 </head>
 <body>
 
-<nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm mb-4">
-    <div class="container d-flex justify-content-between align-items-center">
-        <a class="navbar-brand fw-bold" href="#">
-            <img src="{{ url_for('static', filename='perfil_13_Logo.jpeg') }}" class="logo-circle me-2">Red Solidaria
-        </a>
+<nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm sticky-top">
+    <div class="container">
+        <div class="d-flex align-items-center">
+            <a class="navbar-brand fw-bold d-flex align-items-center" href="#">
+                <img src="{{ url_for('static', filename='perfil_13_Logo.jpeg') }}" class="logo-circle me-2" alt="Logo">
+                <span>Red Solidaria</span>
+            </a>
+            
+            <a href="{{ url_for('fundacion.publicar_necesidad') }}" class="btn btn-success btn-sm ms-3 fw-bold d-inline-flex align-items-center gap-1 shadow-sm" style="border-radius: 8px; padding: 6px 12px;">
+                <i class="fas fa-plus-circle"></i> Nueva Necesidad
+            </a>
+        </div>
         
-        <button class="btn btn-light" onclick="toggleSidebar()">
-            <i class="fas fa-bars"></i>
+        <button class="btn btn-light shadow-sm" onclick="toggleSidebar()">
+            <i class="fas fa-bars"></i> Menú
         </button>
     </div>
 </nav>
 
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    <div class="container mt-3 mx-auto flash-container-wrapper" id="flash-toast-container" style="max-width: 1000px;">
+      {% for category, message in messages %}
+        <div class="toast-donacion {{ category }} shadow-sm d-flex align-items-center gap-3" 
+             style="background-color: #ffffff; border: 2px solid transparent; border-image: linear-gradient(to right, #198754, #1e52ff) 1; border-radius: 10px; color: #333; padding: 15px;">
+            
+            <div class="toast-icon d-flex align-items-center justify-content-center" style="font-size: 1.5rem;">
+                {% if category == 'success' %}✅{% elif category == 'danger' %}❌{% else %}ℹ️{% endif %}
+            </div>
+            
+            <div class="toast-content">
+                <div class="toast-msg fw-bold text-dark" style="font-size: 0.9rem;">{{ message }}</div>
+                <div class="toast-sub text-muted" style="font-size: 0.8rem;">Este mensaje desaparecerá en unos segundos</div>
+            </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+{% endwith %}
+
 <div id="sidebar">
-    <div class="text-center mb-4">
-        <img src="{{ url_for('static', filename=fundacion.foto_perfil) }}" class="profile-img-sidebar">
-        <h5 class="fw-bold">{{ fundacion.nombre_fundacion }}</h5>
-        <p class="text-muted small"><i class="fas fa-user me-1"></i> {{ fundacion.nombre_persona_cargo }}</p>
-        <p class="text-muted small"><i class="fas fa-envelope me-1"></i> {{ usuario.email }}</p>
-        <p class="text-muted small"><i class="fas fa-phone me-1"></i> {{ fundacion.telefono }}</p>
+    <div class="text-center mb-4 border-bottom pb-3">
+        {% if fundacion.foto_perfil and fundacion.foto_perfil != 'None' %}
+            <img src="{{ url_for('static', filename='uploads/' + fundacion.foto_perfil.replace('uploads/', '')) }}" class="profile-img-sidebar" alt="Foto perfil" style="width:70px; height:70px; border-radius:50%; object-fit: cover;">
+        {% else %}
+            <div class="avatar-inicial-lateral mx-auto mb-2" style="width:70px; height:70px; border-radius:50%; background:#1e52ff; color:white; display:flex; align-items:center; justify-content:center; font-size:1.5rem; font-weight:bold;">
+                {{ (fundacion.nombre or fundacion.nombre_fundacion or 'F')[0]|upper }}
+            </div>
+        {% endif %}
+        <h5 class="fw-bold m-0">{{ fundacion.nombre_fundacion or fundacion.nombre }}</h5>
+        <p class="text-muted small mb-1"><i class="fas fa-user me-1"></i> {{ fundacion.nombre_persona_cargo or 'Encargado' }}</p>
+        <p class="text-muted small mb-1"><i class="fas fa-envelope me-1"></i> {{ usuario.email or session.get('email', '—') }}</p>
+        <p class="text-muted small mb-0"><i class="fas fa-phone me-1"></i> {{ fundacion.telefono or '—' }}</p>
     </div>
     
     <div class="nav-item-custom" data-bs-toggle="modal" data-bs-target="#modalAdministrarCuenta">
-        <i class="fas fa-edit me-2"></i> Editar Perfil
+        <i class="fas fa-edit me-2 text-primary"></i> Editar Perfil
     </div>
     
-    <div class="nav-item-custom" onclick="window.location.href='{{ url_for('donaciones.gestionar_donaciones') }}'">
-        <i class="fas fa-history me-2"></i> Mis Donaciones
+    <div class="nav-item-custom" onclick="document.getElementById('mis-donaciones').scrollIntoView({behavior: 'smooth'}); toggleSidebar();">
+        <i class="fas fa-box me-2 text-success"></i> Gestionar Donaciones
     </div>
     <hr>
-    <a href="{{ url_for('auth.logout') }}" class="text-danger text-decoration-none ms-2">
-        <i class="fas fa-sign-out-alt me-2"></i> Salir
+    <a href="{{ url_for('auth.logout') }}" class="nav-item-custom text-danger text-decoration-none d-block">
+        <i class="fas fa-sign-out-alt me-2"></i> Salir de la Cuenta
     </a>
 </div>
 
 <div class="container py-4">
-    <div class="header-dash mx-auto" style="max-width: 900px;">
-        <img src="{{ url_for('static', filename=fundacion.foto_perfil) }}" class="profile-img-header">
-        <h2 class="fw-bold">Panel: {{ fundacion.nombre_fundacion }}</h2>
-        <p>Gestiona tus donaciones y genera reportes de impacto.</p>
+    <div class="header-dash mx-auto shadow" style="max-width: 1000px;">
+        {% if fundacion.foto_perfil %}
+            <img src="{{ url_for('static', filename='uploads/' + fundacion.foto_perfil.replace('uploads/', '')) }}" class="profile-img-header" alt="Foto" style="width:100px; height:100px; border-radius:50%; object-fit: cover; border: 4px solid white;">
+        {% else %}
+            <div class="avatar-inicial-header mx-auto mb-3" style="width:100px; height:100px; border-radius:50%; background:rgba(255,255,255,0.2); color:white; display:flex; align-items:center; justify-content:center; font-size:2.5rem; font-weight:bold; border: 4px solid white;">
+                {{ (fundacion.nombre_fundacion or fundacion.nombre or 'F')[0]|upper }}
+            </div>
+        {% endif %}
+        <h2 class="fw-bold m-0">🏛️ Panel: {{ fundacion.nombre_fundacion or fundacion.nombre }}</h2>
+        <p class="lead text-white-50 small mt-1">¡Hola! Gestiona tus solicitudes de ayuda, automatiza la trazabilidad y descarga reportes.</p>
+        
+        {% if fundacion.estado_validacion == 'aprobado' %}
+            <div class="mt-3">
+                <a href="{{ url_for('fundacion.publicar_necesidad') }}" class="btn btn-light fw-bold shadow px-4 py-2 d-inline-flex align-items-center" style="border-radius: 50px; color: var(--azul-solidario);">
+                    <i class="fas fa-plus-circle me-2"></i>Nueva Solicitud de Ayuda
+                </a>
+            </div>
+        {% endif %}
     </div>
 
-    <div class="donacion-card p-4">
-        <table class="table table-hover">
-            <thead class="table-light">
-                <tr><th>Fecha</th><th>Donante</th><th>Monto</th><th>Estado</th></tr>
-            </thead>
-            <tbody>
-                {% for d in donaciones %}
-                <tr>
-                    <td>{{ d.created_at.strftime('%d/%m/%Y') }}</td>
-                    <td>{{ d.nombre_donante }}</td>
-                    <td class="text-success fw-bold">${{ "{:,.0f}".format(d.monto) }}</td>
-                    <td><span class="badge badge-categoria">{{ d.estado_donante }}</span></td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+    <div class="row mb-4">
+        <div class="col-lg-3 mb-4">
+                {% if fundacion.estado == 'activa' %}
+                    <span class="badge bg-success d-block text-center py-2 mb-3 shadow-sm text-white fw-bold" style="border-radius:10px; font-size:0.85rem;">✅ Fundación Activa</span>
+                {% elif fundacion.estado == 'pendiente' %}
+                    <span class="badge bg-warning text-dark d-block text-center py-2 mb-3 shadow-sm fw-bold" style="border-radius:10px; font-size:0.85rem;">⏳ Validación Pendiente</span>
+                {% else %}
+                    <span class="badge bg-danger d-block text-center py-2 mb-3 shadow-sm text-white fw-bold" style="border-radius:10px; font-size:0.85rem;">❌ Validación Rechazada</span>
+                {% endif %}
+
+            <div class="stats-lateral mb-4">
+                <div class="stats-lateral-header">📊 Estado Donaciones</div>
+                <div class="stats-item">
+                    <span class="label">⏳ Pendientes</span>
+                    <span class="stats-num text-warning">{{ stats.pendientes|default(0) }}</span>
+                </div>
+                <div class="stats-item">
+                    <span class="label">✅ Recibidas</span>
+                    <span class="stats-num text-success">{{ stats.recibidas|default(0) }}</span>
+                </div>
+                <div class="stats-item">
+                    <span class="label">❌ Rechazadas</span>
+                    <span class="stats-num text-danger">{{ stats.rechazadas|default(0) }}</span>
+                </div>
+
+                <div class="stats-lateral-header mt-3" style="background:linear-gradient(135deg,#2575fc,#43c98a);">📦 Categorías Físicas</div>
+                <div class="stats-item">
+                    <span class="label">Alimentos</span>
+                    <span class="stats-num">{{ stats.alimentos|default(0) }}</span>
+                </div>
+                <div class="stats-item">
+                    <span class="label">Ropa</span>
+                    <span class="stats-num">{{ stats.ropa|default(0) }}</span>
+                </div>
+                <div class="stats-item">
+                    <span class="label">Otros</span>
+                    <span class="stats-num">{{ stats.otros|default(0) }}</span>
+                </div>
+
+                <div class="stats-lateral-header mt-3" style="background:linear-gradient(135deg,#f7971e,#ffd200);">💳 Transacciones Online</div>
+                <div class="stats-item">
+                    <span class="label">💰 Económicas</span>
+                    <span class="stats-num text-success fw-bold">{{ stats.monetarias|default(0) }}</span>
+                </div>
+                <div class="stats-item bg-light">
+                    <span class="label fw-bold">🔢 Total Flujos</span>
+                    <span class="stats-num text-primary">{{ stats.total_combinado|default(0) }}</span>
+                </div>
+            </div>
+
+            <div class="panel-section shadow-sm border-0 bg-light p-3">
+                <h6 class="fw-bold mb-3"><i class="fas fa-credit-card text-success me-1"></i> Donaciones Monetarias</h6>
+                {% if donaciones_monetarias %}
+                    <div class="table-responsive" style="max-height: 220px; overflow-y: auto;">
+                        <table class="table table-sm table-hover align-middle m-0" style="font-size: 0.8rem;">
+                            <thead><tr><th>Donante</th><th>Monto</th></tr></thead>
+                            <tbody>
+                                {% for t in donaciones_monetarias %}
+                                <tr>
+                                    <td>{{ t.nombre_donante }}</td>
+                                    <td><strong class="text-success">${{ "{:,.0f}".format(t.monto) }}</strong></td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <p class="text-muted small text-center my-2">No se registran transacciones monetarias aún.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="col-lg-9">
+            <div class="panel-section mb-5 shadow-sm" style="background:#fffdf0; border-left:5px solid #ffc107 !important; padding: 20px; border-radius: 8px;">
+                <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+                    <h4 class="m-0 fw-bold"><i class="fas fa-hand-holding-heart text-warning me-2"></i> Requerimientos de la Fundación</h4>
+                    <a href="{{ url_for('fundacion.solicitudes_fundacion_completo') }}" class="btn btn-warning btn-sm fw-bold shadow-sm px-3" style="border-radius: 20px;">🔗 Ver todas</a>
+                </div>
+                
+                <div class="row g-3">
+                    {% for n in solicitudes_ayuda %}
+                        {% set categoria_str = n.categoria|lower %}
+                        {% set es_monetaria = ('monetaria' in categoria_str or 'causa' in categoria_str) %}
+                        
+                        <div class="col-md-6 col-xl-4">
+                            <div class="card h-100 border-0 shadow-sm" style="{% if es_monetaria %}border-left: 5px solid #28a745 !important;{% else %}border-left: 5px solid #1e52ff !important;{% endif %} border-radius: 12px;">
+                                <div class="card-body p-3 d-flex flex-column">
+                                    
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <small class="text-muted">
+                                            <i class="far fa-calendar-alt"></i> 
+                                            {% if n.created_at %}
+                                                {{ n.created_at.strftime('%d/%m/%Y') }}
+                                            {% else %}
+                                                Reciente
+                                            {% endif %}
+                                        </small>
+                                        <span class="badge {% if n.estado in ['completada', 'completado', 'finalizada', 'finalizado'] %}bg-success{% else %}bg-warning text-dark{% endif %}">
+                                            {{ n.estado|capitalize or 'Activa' }}
+                                        </span>
+                                    </div>
+                                    
+                                    <h6 class="fw-bold text-dark mb-1 text-truncate">
+                                        {% if es_monetaria %}
+                                            <i class="fas fa-bullseye text-success me-1"></i> {{ n.titulo or 'Fondo Monetario' }}
+                                        {% else %}
+                                            <i class="fas fa-box text-primary me-1"></i> {{ n.titulo or 'Recurso Físico' }}
+                                        {% endif %}
+                                    </h6>
+                                    
+                                    <p class="card-text small text-muted mb-3" style="height: 2.8em; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">
+                                        {{ n.descripcion }}
+                                    </p>
+                                    
+                                    <div class="mt-auto pt-2 border-top">
+                                        {% if es_monetaria %}
+                                            <span class="d-block fw-bold small text-success mb-1">
+                                                Meta: ${{ "{:,.0f}".format(n.cantidad_requerida|float) }} COP
+                                            </span>
+                                            <span class="badge bg-light text-success border border-success">Donación Monetaria</span>
+                                        {% else %}
+                                            <span class="d-block fw-bold small text-primary mb-1">
+                                                Cantidad Req: {{ n.cantidad_requerida|float|int }} unidades
+                                            </span>
+                                            <span class="badge bg-light text-dark border">{{ n.categoria|capitalize or 'General' }}</span>
+                                        {% endif %}
+                                    </div>
+                                    
+                                </div>
+                            </div>
+                        </div>
+                    {% else %}
+                        <div class="col-12">
+                            <p class="text-muted small ps-2">No has publicado requerimientos activos en la plataforma.</p>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+                       
+            <div class="panel-section mb-4 shadow-sm border">
+                <h4 class="fw-bold mb-3 text-dark">🔍 Trazabilidad y Filtros</h4>
+                <div class="filtro-container">
+                    <form method="GET" action="{{ url_for('fundacion.dashboard_fundacion') }}" class="row g-2" onsubmit="return manejarEnvio(event);">
+                        <div class="col-md-9">
+                            <label class="small fw-bold text-muted">Correo Destinatario para Envío de Auditoría/Reporte PDF</label>
+                            <input type="email" name="correo_reporte" class="form-control form-control-sm" placeholder="ejemplo@correo.com" value="{{ request.args.get('correo_reporte', '') }}">
+                        </div>
+                        <div class="col-md-3 d-flex align-items-end">
+                            <button type="submit" name="accion" value="reporte" id="btnReporte" class="btn btn-danger btn-sm w-100 fw-bold py-2">
+                                📧 Despachar Reporte
+                            </button>
+                        </div>
+                        
+                        <div class="col-12"><hr class="my-2"></div>
+                        
+                        <div class="col-md-3">
+                            <label class="small fw-bold text-muted">Descripción</label>
+                            <input type="text" name="q" class="form-control form-control-sm" placeholder="Buscar..." value="{{ request.args.get('q', '') }}">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="small fw-bold text-muted">Donante</label>
+                            <input type="text" name="donante" class="form-control form-control-sm" placeholder="Nombre..." value="{{ request.args.get('donante', '') }}">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="small fw-bold text-muted">Categoría</label>
+                           <select name="categoria" class="form-select form-select-sm" onchange="this.form.submit()">
+                            <option value="">Todas</option>
+                            <option value="alimentos" {% if request.args.get('categoria') == 'alimentos' %}selected{% endif %}>Alimentos no perecederos</option>
+                            <option value="ropa" {% if request.args.get('categoria') == 'ropa' %}selected{% endif %}>Ropa</option>
+                            <option value="otros" {% if request.args.get('categoria') == 'otros' %}selected{% endif %}>Otros</option>
+                            <option value="Causa Social (Monetaria)" {% if request.args.get('categoria') == 'Causa Social (Monetaria)' %}selected{% endif %}>💳 Pagos Monetarios</option>
+                        </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="small fw-bold text-muted">Estado</label>
+                            <select name="est" class="form-select form-select-sm">
+                                <option value="">Todos</option>
+                                <option value="pendiente" {% if request.args.get('est') == 'pendiente' %}selected{% endif %}>Pendientes</option>
+                                <option value="recibida"  {% if request.args.get('est') == 'recibida' %}selected{% endif %}>Completadas</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2 d-flex align-items-end">
+                            <button type="submit" name="accion" value="buscar" class="btn btn-primary btn-sm w-100 fw-bold py-2">🔍 BUSCAR</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+<div id="mis-donaciones" class="panel-section mb-4">
+    <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-2">
+        <h4 class="fw-bold m-0 text-dark">📦 Gestión de Donaciones</h4>
+        <span class="badge bg-dark px-3 py-2" style="border-radius:20px;">{{ donaciones|length if donaciones else 0 }} Flujos Encontrados</span>
     </div>
+
+    {% if donaciones %}
+    <div class="row g-3">
+        {% for d in donaciones %}
+        <div class="col-12 col-md-6">
+            <div class="card donacion-card h-100 d-flex flex-column">
+                <div class="card-header border-0 bg-transparent pt-3 px-3 pb-1 d-flex justify-content-between align-items-center">
+                    <span class="badge badge-categoria">{{ d.nombre_categoria }}</span>
+                    {% if d.estado == 'recibida' %}
+                        <span class="badge bg-success text-white px-3 py-1" style="border-radius:30px; font-size:0.7rem; font-weight:700;">✅ COMPLETADA</span>
+                    {% else %}
+                        <span class="badge bg-warning text-dark px-3 py-1" style="border-radius:30px; font-size:0.7rem; font-weight:700;">⏳ PENDIENTE</span>
+                    {% endif %}
+                </div>
+
+                <div class="card-body px-3 py-2 flex-grow-1">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h6 class="fw-bold m-0 text-dark">
+                            {% if d.tipo == 'monetario' %}
+                                <i class="fas fa-hand-holding-usd text-success me-1"></i> Donación Recibida Causa Social
+                            {% else %}
+                                <i class="fas fa-box-open text-primary me-1"></i> Donación Recibida Física
+                            {% endif %}
+                        </h6>
+                        {% if d.foto_existe %}
+                            <button type="button" class="btn btn-sm btn-link text-decoration-none p-0" onclick="abrirFotoModal('{{ url_for('static', filename='img/donaciones/' + d.fotos) }}')">🖼️ Ver Foto</button>
+                        {% endif %}
+                    </div>
+
+                    <p class="small text-muted fst-italic mb-3">"{{ d.descripcion }}"</p>
+
+                    <div class="p-2 bg-light rounded mb-2 small" style="font-size:0.82rem;">
+                        <div><strong>Donante:</strong> {{ d.nombre_donante }}</div>
+                        <div><strong>Teléfono:</strong> {{ d.telefono }}</div>
+                        <div><strong>Correo:</strong> {{ d.correo }}</div>
+                    </div>
+
+                    {% if d.tipo == 'monetario' %}
+                        <div class="p-2 bg-light rounded mb-2 small" style="font-size:0.82rem;">
+                            <div><strong>Monto donado:</strong> <span class="text-success fw-bold">${{ "{:,.0f}".format(d.cantidad) }} COP</span></div>
+                            <div><strong>Método de pago:</strong>
+                                {% if d.card_brand %}
+                                    <i class="fab fa-cc-{{ d.card_brand|lower }} me-1"></i> {{ d.card_brand|capitalize }} •••• {{ d.card_last4 or '****' }}
+                                {% else %}
+                                    Stripe
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% else %}
+                        <div class="p-2 bg-light rounded mb-2 small" style="font-size:0.82rem;">
+                            <div><strong>Categoría:</strong> {{ d.nombre_categoria }}</div>
+                            <div><strong>Cantidad donada:</strong> {{ d.cantidad }} unidades</div>
+                        </div>
+                    {% endif %}
+
+                    <div class="d-flex justify-content-between align-items-center mt-2 border-top pt-2">
+                        <span class="text-muted small fw-bold">
+                            {% if d.fecha_gestion %}FECHA DE GESTIÓN{% else %}FECHA DE REGISTRO{% endif %}
+                        </span>
+                        <span class="fw-bold text-primary">
+                            {% if d.fecha_gestion %}
+                                {{ d.fecha_gestion.strftime('%d/%m/%Y %H:%M') }}
+                            {% else %}
+                                {{ d.created_at.strftime('%d/%m/%Y %H:%M') if d.created_at else '—' }}
+                            {% endif %}
+                        </span>
+                    </div>
+                </div>
+
+                <div class="card-footer border-0 bg-transparent px-3 pb-3 pt-1 mt-auto">
+                    <div class="text-center bg-light rounded py-2 mb-2">
+                        {% if d.estado == 'recibida' %}
+                            <span class="text-success small fw-bold" style="font-size:0.75rem;">⚡ META CUMPLIDA — GESTIÓN AUTOMÁTICA</span>
+                        {% else %}
+                            <span class="text-muted small fw-bold" style="font-size:0.75rem;">⏳ Esperando que la necesidad cumpla su meta</span>
+                        {% endif %}
+                    </div>
+
+                    <form action="{{ url_for('donaciones.gestionar_donaciones') }}" method="POST" onsubmit="return confirm('¿Deseas archivar/eliminar este registro de donación?');">
+                        <input type="hidden" name="donacion_id" value="{{ d.id }}">
+                        <button type="submit" name="accion" value="eliminar" class="btn btn-outline-secondary btn-sm w-100 py-1" style="border-radius:8px; font-size:0.8rem;">
+                            <i class="fas fa-trash-alt me-1"></i> Eliminar Registro
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="modalFotoOverlay" id="modalFotoOverlay" onclick="this.classList.remove('activo')">
+        <button class="btn-cerrar-foto" onclick="document.getElementById('modalFotoOverlay').classList.remove('activo')">×</button>
+        <img id="fotoModal" src="" class="modal-content-img" onclick="event.stopPropagation()" alt="Preview">
+    </div>
+
+    {% else %}
+    <div class="text-center py-5 bg-white rounded-4 border">
+        <p class="text-muted mb-0 fw-medium">No se registran donaciones con los filtros seleccionados actualmente.</p>
+    </div>
+    {% endif %}
+</div>
+        </div> 
+    </div> 
 </div>
 
-<div class="modal fade" id="modalAdministrarCuenta" tabindex="-1">
+<div class="modal fade" id="modalAdministrarCuenta" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">
-        <div class="modal-content">
+        <div class="modal-content" style="border-radius: 15px;">
             <form action="{{ url_for('auth.editar_perfil') }}" method="POST" enctype="multipart/form-data">
                 <div class="modal-header">
-                    <h5 class="modal-title">⚙️ Editar Perfil</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    <h5 class="modal-title fw-bold">⚙️ Administrar Cuenta y Perfil</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <label>Nombre Fundación</label>
-                    <input type="text" name="nombre_fundacion" value="{{ fundacion.nombre_fundacion }}" class="form-control mb-3" required>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-muted">Nombre de la Fundación</label>
+                        <input type="text" name="nombre_fundacion" value="{{ fundacion.nombre_fundacion or fundacion.nombre }}" class="form-control" required>
+                    </div>
                     
-                    <label>Nombre Encargado</label>
-                    <input type="text" name="nombre_encargado" value="{{ fundacion.nombre_persona_cargo }}" class="form-control mb-3" required>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-muted">Representante o Encargado</label>
+                        <input type="text" name="nombre_encargado" value="{{ fundacion.nombre_persona_cargo or '' }}" class="form-control" required>
+                    </div>
                     
-                    <label>Teléfono</label>
-                    <input type="text" name="telefono" value="{{ fundacion.telefono }}" class="form-control mb-3" required>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-muted">Línea de Contacto / Teléfono</label>
+                        <input type="text" name="telefono" value="{{ fundacion.telefono or '' }}" class="form-control" required>
+                    </div>
                     
-                    <label>Email</label>
-                    <input type="email" name="email" value="{{ usuario.email }}" class="form-control mb-3" required>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-muted">Correo Electrónico Institucional</label>
+                        <input type="email" name="email" value="{{ usuario.email or session.get('email', '') }}" class="form-control" required>
+                    </div>
 
-                    <label>Foto de Perfil</label>
-                    <input type="file" name="foto_perfil" class="form-control" accept="image/*">
-                </div>
+                    <div class="mb-2">
+                        <label class="form-label small fw-bold text-muted">Imagen de Perfil Actual</label>
+                        <div class="text-center mb-3 border-bottom pb-3">
+                            {% if fundacion.foto_perfil and fundacion.foto_perfil != 'None' %}
+                                <img src="{{ url_for('static', filename='uploads/' + fundacion.foto_perfil.replace('uploads/', '')) }}" 
+                                     class="profile-img-sidebar" 
+                                     alt="Foto perfil" 
+                                     style="width:70px; height:70px; border-radius:50%; object-fit: cover;">
+                            {% else %}
+                                <div class="avatar-inicial-sidebar mx-auto mb-2" style="width:70px; height:70px; border-radius:50%; background:#1e52ff; color:white; display:flex; align-items:center; justify-content:center; font-size:1.5rem; font-weight:bold;">
+                                    {{ (fundacion.nombre_fundacion or 'F')[0]|upper }}
+                                </div>
+                            {% endif %}
+                            <h5 class="fw-bold m-0 mt-2" style="font-size: 1.1rem;">{{ fundacion.nombre_fundacion or fundacion.nombre }}</h5>
+                        </div>
+                        
+                        <label class="form-label small fw-bold text-muted mt-2">Subir Nueva Foto</label>
+                        <input type="file" name="foto_perfil" class="form-control" accept="image/*">
+                    </div>
+                </div> 
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+                    <button type="button" class="btn btn-secondary border-0 btn-sm px-3" data-bs-dismiss="modal" style="border-radius:8px;">Cancelar</button>
+                    <button type="submit" class="btn btn-primary btn-sm px-4" style="border-radius:8px; background:var(--azul-solidario);">Guardar Cambios</button>
                 </div>
             </form>
         </div>
@@ -126,35 +494,45 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-    // Tu función original para el menú lateral
     function toggleSidebar() {
         const sidebar = document.getElementById('sidebar');
-        sidebar.style.display = (sidebar.style.display === 'block') ? 'none' : 'block';
+        if(sidebar.style.display === 'block') {
+            sidebar.style.display = 'none';
+        } else {
+            sidebar.style.display = 'block';
+        }
     }
 
-    // Nueva función para cargar las tablas sin recargar la página (AJAX)
-    function cargarSeccion(tipo) {
-        document.getElementById('dinamicTable').innerHTML = '<div class="text-center p-5"><div class="spinner-border text-primary"></div></div>';
-        
-        // El fetch ahora apunta a la ruta correcta corregida
-        fetch(`/get_${tipo}`) 
-        .then(res => res.text())
-        .then(html => {
-            document.getElementById('dinamicTable').innerHTML = html;
-        })
-        .catch(err => {
-            document.getElementById('dinamicTable').innerHTML = '<p class="text-danger text-center">Error al cargar datos.</p>';
-        });
+    function abrirFotoModal(url) {
+        document.getElementById('fotoModal').src = url;
+        document.getElementById('modalFotoOverlay').classList.add('activo');
     }
 
-    // Mantén las otras funciones que ya tenías para el modal y acciones
-    function handleSidebarClick(tipo) {
-        // Si usas un offcanvas de Bootstrap, este código es correcto
-        const sidebarElement = document.getElementById('sidebarAdmin');
-        const bsOffcanvas = bootstrap.Offcanvas.getInstance(sidebarElement);
-        if (bsOffcanvas) bsOffcanvas.hide();
-        cargarSeccion(tipo);
+    document.addEventListener('click', function(event) {
+        const sidebar = document.getElementById('sidebar');
+        const menuBtn = document.querySelector('button[onclick="toggleSidebar()"]');
+        if (sidebar.style.display === 'block' && !sidebar.contains(event.target) && !menuBtn.contains(event.target)) {
+            sidebar.style.display = 'none';
+        }
+    });
+
+    function manejarEnvio(e) {
+        return true;
     }
+
+    document.addEventListener("DOMContentLoaded", function() {
+        const contenedor = document.getElementById("flash-toast-container");
+        if (contenedor) {
+            setTimeout(function() {
+                contenedor.style.transition = "opacity 0.6s ease";
+                contenedor.style.opacity = "0";
+                
+                setTimeout(function() {
+                    contenedor.remove();
+                }, 600);
+            }, 4000);
+        }
+    });
 </script>
 </body>
 </html>

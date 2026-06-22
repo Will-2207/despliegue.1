@@ -1,17 +1,22 @@
 import os
 import requests
 
+
 class EmailService:
     API_URL = "https://api.brevo.com/v3/smtp/email"
-    API_KEY = os.environ.get("BREVO_API_KEY")
-    SENDER_EMAIL = os.environ.get("BREVO_SENDER_EMAIL")
-    SENDER_NAME = os.environ.get("BREVO_SENDER_NAME", "Red Solidaria")
+    API_KEY = os.environ.get("MAIL_PASSWORD")
+    SENDER_EMAIL = "cartuji7@gmail.com"
+    SENDER_NAME = "Red Solidaria"
 
     @staticmethod
-    def enviar_notificacion(email_destino, nombre_destino, asunto, mensaje):
-        if not EmailService.API_KEY or not EmailService.SENDER_EMAIL:
-            print("Brevo no configurado: faltan BREVO_API_KEY o BREVO_SENDER_EMAIL.")
+    def enviar_notificacion(email_destino, nombre_destino, asunto, html_content):
+        if not EmailService.API_KEY:
+            print("Brevo no configurado: falta MAIL_PASSWORD (API key de Brevo).")
             return False, "Brevo no configurado."
+
+        if not email_destino:
+            print("No se envio correo: email_destino vacio.")
+            return False, "Email de destino vacio."
 
         headers = {
             "api-key": EmailService.API_KEY,
@@ -19,9 +24,9 @@ class EmailService:
         }
         payload = {
             "sender": {"name": EmailService.SENDER_NAME, "email": EmailService.SENDER_EMAIL},
-            "to": [{"email": email_destino, "name": nombre_destino}],
+            "to": [{"email": email_destino, "name": nombre_destino or "Usuario"}],
             "subject": asunto,
-            "htmlContent": f"<html><body><h3>Hola, {nombre_destino}</h3><p>{mensaje}</p></body></html>"
+            "htmlContent": html_content
         }
         try:
             response = requests.post(

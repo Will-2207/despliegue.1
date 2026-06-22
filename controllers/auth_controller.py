@@ -77,11 +77,15 @@ def logout():
 @auth_bp.route('/editar-perfil', methods=['POST'])
 @login_required
 def editar_perfil():
-    exito, mensaje, nombre_sesion = AuthService.actualizar_perfil_fundacion(
+    # CORRECCIÓN: Usar 'rol' que es la clave real guardada en la sesión en el login
+    rol_usuario = session.get('rol') 
+    
+    exito, mensaje, nombre_sesion = AuthService.actualizar_perfil_usuario(
         session.get('usuario_id'),
         request.form,
         request.files,
-        current_app.root_path
+        current_app.root_path,
+        rol_usuario
     )
 
     flash(mensaje, 'success' if exito else 'danger')
@@ -89,4 +93,7 @@ def editar_perfil():
     if exito and nombre_sesion:
         session['usuario_nombre'] = nombre_sesion
 
-    return redirect(url_for('fundacion.dashboard_fundacion'))
+    if rol_usuario == 'fundacion':
+        return redirect(url_for('fundacion.dashboard_fundacion'))
+    else:
+        return redirect(url_for('donaciones.inicio_donante'))

@@ -2,87 +2,234 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Publicar Necesidad — SolidariApp</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Publicar Requerimiento — Red Solidaria</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        :root { --azul-solidario: #1e52ff; --verde-solidario: #63ff5e; }
-        body { background: #f0f2f5; font-family: 'Segoe UI', sans-serif; display: flex; justify-content: center; padding: 50px 0; }
-        .card-form { width: 100%; max-width: 600px; background: white; padding: 40px; border-radius: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
-        .btn-custom { background: linear-gradient(135deg, var(--azul-solidario), var(--verde-solidario)); color: white; border: none; border-radius: 50px; padding: 12px; font-weight: 600; }
+        :root { --azul-solidario: #1e52ff; --verde-gradiente: #28a745; }
+        body { background-color: #f4f6fa; font-family: 'Segoe UI', sans-serif; }
+        
+        .container-premium { max-width: 800px; margin-top: 50px; margin-bottom: 50px; }
+        .card-premium { border-radius: 24px; border: none; background: white; box-shadow: 0 15px 40px rgba(30, 82, 255, 0.06); overflow: hidden; }
+        
+        /* Encabezado con gradiente corporativo */
+        .card-header-gradient { background: linear-gradient(135deg, var(--azul-solidario), var(--verde-gradiente)); color: white; padding: 35px; text-align: center; border: none; }
+        
+        /* Switch/Selectores innovadores para el tipo de solicitud */
+        .selector-tipo-btn { border: 2px solid #dee2e6; border-radius: 14px; padding: 15px; cursor: pointer; text-align: center; transition: all 0.25s ease; font-weight: 600; color: #555; background: #fff; }
+        .selector-tipo-btn:hover { border-color: var(--azul-solidario); background: #f8faff; }
+        .selector-tipo-btn.active { border-color: var(--azul-solidario); background: #eef2ff; color: var(--azul-solidario); box-shadow: 0 4px 15px rgba(30, 82, 255, 0.12); }
+        
+        .form-control-custom { border-radius: 12px; border: 1px solid #ced4da; padding: 12px 16px; font-size: 0.95rem; transition: all 0.2s ease; }
+        .form-control-custom:focus { border-color: var(--azul-solidario); box-shadow: 0 0 0 4px rgba(30, 82, 255, 0.12); }
+        
+        .sub-tarjeta-dinamica { background: #f8f9fa; border-radius: 16px; border: 1px dashed #ced4da; padding: 20px; transition: all 0.3s ease; }
+        .btn-crear { background: linear-gradient(135deg, var(--azul-solidario), var(--verde-gradiente)); color: white; border: none; border-radius: 50px; font-weight: 600; padding: 12px 35px; box-shadow: 0 5px 15px rgba(30, 82, 255, 0.2); }
+        .btn-crear:hover { opacity: 0.95; color: white; }
     </style>
 </head>
 <body>
 
-<div class="card-form">
-    <h3 class="fw-bold mb-4 text-center"><i class="fas fa-hand-holding-heart text-primary me-2"></i>Nueva Necesidad</h3>
-    
-    <form method="POST" action="{{ url_for('fundacion.publicar_necesidad') }}" id="form-publicar">
+<div class="container container-premium">
+    <div class="card card-premium">
+        <div class="card-header-gradient">
+            <h2 class="fw-bold m-0"><i class="fas fa-hand-holding-heart me-2"></i>Publicar Nueva Solicitud</h2>
+            <p class="m-0 mt-2 opacity-75">Elige el tipo de ayuda que necesita tu fundación para conectarte con los donantes.</p>
+        </div>
         
-        <div class="mb-3">
-            <input type="text" name="titulo" placeholder="Título de la necesidad" class="form-control" required>
-        </div>
-        <div class="mb-3">
-            <textarea name="descripcion" placeholder="Descripción breve" class="form-control" required></textarea>
-        </div>
-        <div class="mb-3">
-            <input type="number" name="cantidad_requerida" placeholder="Cantidad requerida" class="form-control" required>
-        </div>
-        <div class="mb-3">
-            <label>Categoría</label>
-            <select name="categoria" id="categoria" class="form-select" onchange="actualizarCampos()" required>
-                <option value="">Seleccione una categoría...</option>
-                <option value="alimentos">Alimentos No Perecederos</option>
-                <option value="ropa">Ropa</option>
-                <option value="otros">Otros</option>
-            </select>
-        </div>
+        <div class="card-body p-4 p-md-5">
+            <form method="POST" action="{{ url_for('fundacion.publicar_necesidad') }}" id="form-publicar">
+                
+                {# ── PASO 1: SELECCIÓN DEL TIPO (INNOVADOR) ── #}
+                <label class="small fw-bold text-uppercase tracking-wider text-secondary mb-3 d-block">1. Selecciona el Tipo de Solicitud</label>
+                <div class="row g-3 mb-4">
+                    <div class="col-md-6">
+                        <div class="selector-tipo-btn active" id="btn-tipo-fisico" onclick="cambiarTipoSolicitud('fisico')">
+                            <i class="fas fa-box-open fa-2x mb-2 text-primary"></i>
+                            <div class="fs-5">Necesidad Física</div>
+                            <small class="text-muted fw-normal">Alimentos, ropa u otros elementos materiales</small>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="selector-tipo-btn" id="btn-tipo-monetario" onclick="cambiarTipoSolicitud('monetario')">
+                            <i class="fas fa-donate fa-2x mb-2 text-success"></i>
+                            <div class="fs-5">Causa Social (Monetaria)</div>
+                            <small class="text-muted fw-normal">Recaudación de fondos para proyectos u obras</small>
+                        </div>
+                    </div>
+                </div>
 
-        <div id="campos-dinamicos" class="card p-3 mb-3 d-none">
-            <div id="div-alimentos" class="d-none">
-                <input type="text" name="nombre_alimento" placeholder="Nombre del alimento" class="form-control mb-2">
-                <input type="date" name="fecha_limite" class="form-control mb-2">
-                <input type="number" name="tiempo_vencimiento" placeholder="Días para vencimiento" class="form-control mb-2">
-            </div>
+                {# Input oculto que enviará el tipo seleccionado al backend ('fisico' o 'monetario') #}
+                <input type="hidden" name="tipo_solicitud" id="tipo_solicitud" value="fisico">
 
-            <div id="div-ropa" class="d-none">
-                <select name="tipo_beneficiario" class="form-select mb-2">
-                    <option value="hombre">Hombre</option>
-                    <option value="mujer">Mujer</option>
-                    <option value="niño">Niño</option>
-                    <option value="niña">Niña</option>
-                </select>
-                <input type="text" name="talla" placeholder="Talla" class="form-control mb-2">
-                <input type="text" name="color" placeholder="Color" class="form-control mb-2">
-            </div>
+                <hr class="my-4 opacity-25">
 
-            <div id="div-otros" class="d-none">
-                <textarea name="descripcion_detallada" placeholder="Descripción detallada del artículo" class="form-control mb-2"></textarea>
-            </div>
+                {# ── PASO 2: DATOS GENERALES ── #}
+                <label class="small fw-bold text-uppercase tracking-wider text-secondary mb-3 d-block">2. Detalles Principales</label>
+                <div class="row">
+                    <div class="col-md-12 mb-3">
+                        <label class="small fw-semibold text-dark mb-1">Título de la Solicitud</label>
+                        <input type="text" name="titulo" placeholder="Ej. Kits escolares para niños de la comunidad" class="form-control form-control-custom" required>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="small fw-semibold text-dark mb-1">Descripción clara de la ayuda requerida</label>
+                    <textarea name="descripcion" placeholder="Explica detalladamente en qué se invertirá o usará la ayuda..." class="form-control form-control-custom" rows="4" required></textarea>
+                </div>
+
+                {# ── PASO 3: BLOQUE DINÁMICO VARIABLES SEGÚN EL TIPO ── #}
+                <div id="contenedor-dinamico-principal">
+                    
+                    {# ══ BLOQUE: NECESIDAD FÍSICA ══ #}
+                    <div id="seccion-fisica">
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="small fw-semibold text-dark mb-1">Cantidad de artículos requeridos</label>
+                                <input type="number" name="cantidad_requerida" id="input-cant-fisica" placeholder="Ej. 100" class="form-control form-control-custom" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="small fw-semibold text-dark mb-1">Categoría del elemento</label>
+                                <select name="categoria" id="categoria" class="form-select form-control-custom" onchange="actualizarCamposSubcategoria()">
+                                    <option value="">Seleccione una categoría...</option>
+                                    <option value="alimentos">Alimentos No Perecederos</option>
+                                    <option value="ropa">Ropa</option>
+                                    <option value="otros">Otros</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        {# Subcampos específicos de la categoría física (Lista de opciones) #}
+                        <div id="campos-subcategoria" class="sub-tarjeta-dinamica d-none mb-4">
+                            
+                            <div id="div-alimentos" class="d-none">
+                                <div class="row g-3">
+                                    <div class="col-md-4">
+                                        <label class="small text-muted mb-1">Nombre Alimento</label>
+                                        <input type="text" name="tipo_alimento" placeholder="Ej. Lentejas" class="form-control form-control-custom bg-white">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="small text-muted mb-1">Fecha Límite</label>
+                                        <input type="date" name="fecha_vencimiento" class="form-control form-control-custom bg-white">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="small text-muted mb-1">Días Vencimiento</label>
+                                        <input type="number" name="tiempo_vencimiento" placeholder="Mínimo de días" class="form-control form-control-custom bg-white">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div id="div-ropa" class="d-none">
+                                <div class="row g-3">
+                                    <div class="col-md-4">
+                                        <label class="small text-muted mb-1">Beneficiario</label>
+                                        <select name="genero" class="form-select form-control-custom bg-white">
+                                            <option value="hombre">Hombre</option>
+                                            <option value="mujer">Mujer</option>
+                                            <option value="niño">Niño</option>
+                                            <option value="niña">Niña</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="small text-muted mb-1">Talla</label>
+                                        <input type="text" name="talla" placeholder="Ej: M, L, 10" class="form-control form-control-custom bg-white">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="small text-muted mb-1">Color</label>
+                                        <input type="text" name="color" placeholder="Ej: Azul / Neutro" class="form-control form-control-custom bg-white">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div id="div-otros" class="d-none">
+                                <label class="small text-muted mb-1">Especificaciones detalladas del artículo</label>
+                                <textarea name="descripcion_detallada" placeholder="Indica medidas, materiales o condiciones técnicas específicas..." class="form-control form-control-custom bg-white" rows="2"></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    {# ══ BLOQUE: CAUSA SOCIAL (MONETARIA) ══ #}
+                    <div id="seccion-monetaria" class="d-none">
+                        <div class="row mb-4">
+                            <div class="col-md-12">
+                                <div class="p-3 mb-3 border-0 rounded-3" style="background-color: #eefbf3; color: #198754;">
+                                    <i class="fas fa-info-circle me-2"></i><strong>Nota de Transparencia:</strong> Las causas monetarias recaudan fondos directamente mediante pasarelas auditadas. Define la meta exacta.
+                                </div>
+                                <label class="small fw-semibold text-dark mb-1">Monto Meta de Recaudación (COP)</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-white" style="border-radius: 12px 0 0 12px; border-right: none;">$</span>
+                                    <input type="number" name="monto_meta" id="input-monto-meta" placeholder="Ej. 5000000" class="form-control form-control-custom" style="border-radius: 0 12px 12px 0;">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                {# Botones de control #}
+                <div class="d-flex gap-3 justify-content-end mt-4 pt-3 border-top">
+                    <a href="{{ url_for('fundacion.dashboard_fundacion') }}" class="btn btn-light fw-semibold px-4 py-2" style="border-radius: 50px;">Volver al Panel</a>
+                    <button type="submit" class="btn btn-crear px-5 shadow">Publicar en la Red</button>
+                </div>
+            </form>
         </div>
-
-        <button type="submit" class="btn btn-custom w-100">Publicar Necesidad</button>
-        <a href="{{ url_for('fundacion.dashboard_fundacion') }}" class="btn btn-link w-100 mt-2 text-decoration-none">Volver al panel</a>
-    </form>
+    </div>
 </div>
 
 <script>
-function actualizarCampos() {
-    const cat = document.getElementById('categoria').value;
-    const container = document.getElementById('campos-dinamicos');
-    
-    // Ocultar todos
-    document.getElementById('div-alimentos').classList.add('d-none');
-    document.getElementById('div-ropa').classList.add('d-none');
-    document.getElementById('div-otros').classList.add('d-none');
-    
-    if(cat) {
-        container.classList.remove('d-none');
-        document.getElementById('div-' + cat).classList.remove('d-none');
-    } else {
-        container.classList.add('d-none');
+    // Cambia dinámicamente entre el Formulario Físico y el Monetario
+    function cambiarTipoSolicitud(tipo) {
+        document.getElementById('tipo_solicitud').value = tipo;
+        
+        const btnFisico = document.getElementById('btn-tipo-fisico');
+        const btnMonetario = document.getElementById('btn-tipo-monetario');
+        const seccionFisica = document.getElementById('seccion-fisica');
+        const seccionMonetaria = document.getElementById('seccion-monetaria');
+        
+        const inputCantFisica = document.getElementById('input-cant-fisica');
+        const selectCategoria = document.getElementById('categoria');
+        const inputMontoMeta = document.getElementById('input-monto-meta');
+
+        if (tipo === 'fisico') {
+            btnFisico.classList.add('active');
+            btnMonetario.classList.remove('active');
+            seccionFisica.classList.remove('d-none');
+            seccionMonetaria.classList.add('d-none');
+            
+            // Atributos requeridos condicionales para Físico
+            inputCantFisica.setAttribute('required', 'required');
+            selectCategoria.setAttribute('required', 'required');
+            inputMontoMeta.removeAttribute('required');
+        } else {
+            btnMonetario.classList.add('active');
+            btnFisico.classList.remove('active');
+            seccionMonetaria.classList.remove('d-none');
+            seccionFisica.classList.add('d-none');
+            
+            // Atributos requeridos condicionales para Monetario
+            inputMontoMeta.setAttribute('required', 'required');
+            inputCantFisica.removeAttribute('required');
+            selectCategoria.removeAttribute('required');
+        }
     }
-}
+
+    // Cambia las subcategorías dentro de la sección física (Opción List corregido)
+    function actualizarCamposSubcategoria() {
+        const cat = document.getElementById('categoria').value;
+        const container = document.getElementById('campos-subcategoria');
+        
+        document.getElementById('div-alimentos').classList.add('d-none');
+        document.getElementById('div-ropa').classList.add('d-none');
+        document.getElementById('div-otros').classList.add('d-none');
+        
+        if(cat) {
+            container.classList.remove('d-none');
+            document.getElementById('div-' + cat).classList.remove('d-none');
+        } else {
+            container.classList.add('d-none');
+        }
+    }
 </script>
 </body>
 </html>

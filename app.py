@@ -16,6 +16,10 @@ app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY', 'una_clave_muy_segura_y_larga_12345')
 stripe.api_key = os.getenv('STRIPE_SECRET_KEY')
 
+# ── FIX: registramos la clave también en app.config, porque ──
+# donaciones_controller.py la lee con current_app.config['STRIPE_SECRET_KEY']
+app.config['STRIPE_SECRET_KEY'] = os.getenv('STRIPE_SECRET_KEY')
+
 # Configuración Postgres (SQLAlchemy)
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False

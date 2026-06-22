@@ -9,14 +9,19 @@ db = SQLAlchemy()
 
 class Usuario(db.Model):
     __tablename__ = 'usuarios'
+    
     id = db.Column(db.Integer, primary_key=True)
     nombre = db.Column(db.String(150), nullable=False)
     email = db.Column(db.String(150), unique=True, nullable=False)
     password_hash = db.Column(db.String(255), nullable=False)
-    direccion = db.Column(db.String(255)) # <--- ESTA ES LA LÍNEA NUEVA
+    direccion = db.Column(db.String(255))
     rol = db.Column(db.String(20), default='donante')
     stripe_customer_id = db.Column(db.String(100))
     created_at = db.Column(db.TIMESTAMP, default=datetime.utcnow)
+    foto_perfil = db.Column(db.String(255), nullable=True)
+    
+    # ── AÑADE ESTA LÍNEA AQUÍ ──
+    telefono = db.Column(db.String(20), nullable=True)
 
 class Fundacion(db.Model):
     __tablename__ = 'fundaciones'
@@ -44,7 +49,6 @@ class Necesidad(db.Model):
     titulo = db.Column(db.String(200), nullable=False)
     descripcion = db.Column(db.Text, nullable=False)
     
-    # Campos dinámicos para tu lógica nueva
     cantidad_requerida = db.Column(db.Integer, default=1)
     cantidad_comprometida = db.Column(db.Integer, default=0)
     categoria = db.Column(db.String(50)) # 'monetaria', 'alimentos', 'ropa', 'otros'
@@ -53,7 +57,8 @@ class Necesidad(db.Model):
     estado = db.Column(db.String(20), default='activa')
     created_at = db.Column(db.TIMESTAMP, default=datetime.utcnow)
 
-# --- DONACIONES (ESTRUCTURA DE AUDITORÍA) ---
+    # ── LA ÚNICA ADICIÓN AQUÍ: Relación limpia para no romper nada ──
+    fundacion = db.relationship('Fundacion', backref='necesidades_asociadas', lazy=True)
 
 # --- DONACIONES (ESTRUCTURA DE AUDITORÍA) ---
 
@@ -69,13 +74,19 @@ class DonacionFisica(db.Model):
     detalles_json = db.Column(db.Text)
     created_at = db.Column(db.TIMESTAMP, default=datetime.utcnow)
 
+    # ── NUEVO: fecha en que la donación fue marcada como 'recibida',
+    # ya sea automáticamente (al cumplirse la meta de la necesidad) o
+    # manualmente. Queda NULL mientras está pendiente.
+    fecha_gestion = db.Column(db.TIMESTAMP, nullable=True)
+
     def to_dict(self):
         return {
             'id': self.id,
             'articulo': self.articulo,
             'cantidad': self.cantidad_comprometida,
             'estado': self.estado,
-            'fecha': str(self.created_at)
+            'fecha': str(self.created_at),
+            'fecha_gestion': str(self.fecha_gestion) if self.fecha_gestion else None
         }
 
 class DonacionMonetaria(db.Model):
@@ -90,13 +101,30 @@ class DonacionMonetaria(db.Model):
     email_donante = db.Column(db.String(150))
     created_at = db.Column(db.TIMESTAMP, default=datetime.utcnow)
 
+    # ── NUEVO: estado de la donación monetaria. Por defecto 'recibida'
+    # porque si esta fila existe, es porque Stripe ya confirmó el pago.
+    # Valores esperados: 'recibida' (default) o 'gestionada'.
+    estado = db.Column(db.String(20), default='recibida')
+
+    # ── NUEVO: relación ORM hacia Necesidad. No requiere migración porque
+    # necesidad_id ya existía como columna; esto solo agrega el acceso
+    # cómodo donacion_monetaria.necesidad en Python ──
+    necesidad = db.relationship('Necesidad', backref='donaciones_monetarias_asociadas', lazy=True)
+
+    # ── NUEVO: fecha de gestión, por consistencia con DonacionFisica.
+    # En monetarias siempre coincide con created_at, porque el pago de
+    # Stripe ya confirma la donación al instante (nace en 'recibida').
+    fecha_gestion = db.Column(db.TIMESTAMP, nullable=True)
+
     def to_dict(self):
         return {
             'id': self.id,
             'monto': float(self.monto),
             'brand': self.card_brand,
             'last4': self.card_last4,
-            'fecha': str(self.created_at)
+            'estado': self.estado,
+            'fecha': str(self.created_at),
+            'fecha_gestion': str(self.fecha_gestion) if self.fecha_gestion else None
         }
 # --- AUDITORÍA ---
 
@@ -115,5 +143,4 @@ class TicketSoporte(db.Model):
     nombre = db.Column(db.String(100))
     email = db.Column(db.String(100))
     mensaje = db.Column(db.Text)
-    created_at = db.Column(db.DateTime, default=db.func.current_timestamp())    
-    
+    created_at = db.Column(db.DateTime, default=db.func.current_timestamp())
