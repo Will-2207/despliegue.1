@@ -25,7 +25,7 @@ def inicio_donante():
         try:
             # Reutilizamos la misma consulta que ya hace el panel
             donaciones_para_reporte = DonacionService.obtener_donaciones_filtradas(usuario_id=usuario_id)
-            generar_y_enviar_pdf(donaciones_para_reporte, email_reporte)
+            generar_reporte_pdf(donaciones_para_reporte, email_reporte)
             flash(f"Reporte enviado exitosamente a {email_reporte}", "success")
             return redirect(url_for('donaciones.inicio_donante'))
         except Exception as e:

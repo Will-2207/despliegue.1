@@ -4,7 +4,7 @@ from controllers import fundacion_bp
 from decorators import login_required
 from models.soporte_manager import SoporteManager
 from services.fundacion_service import FundacionService
-from reporte_pdf import generar_y_enviar_pdf # Importado desde la raíz
+from reporte_pdf import generar_reporte_pdf # Importado desde la raíz
 
 @fundacion_bp.route('/dashboard-fundacion', methods=['GET'])
 @login_required
@@ -22,7 +22,7 @@ def dashboard_fundacion():
             # Ajusta 'donaciones' o 'necesidades' según lo que contenga tu objeto contexto
             datos_reporte = contexto.get('donaciones', []) 
             
-            generar_y_enviar_pdf(datos_reporte, email_reporte)
+            generar_reporte_pdf(datos_reporte, email_reporte)
             flash(f"Reporte enviado exitosamente a {email_reporte}", "success")
             return redirect(url_for('fundacion.dashboard_fundacion'))
         except Exception as e:
