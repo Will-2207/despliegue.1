@@ -1,10 +1,8 @@
-from flask import render_template, request, redirect, url_for, flash, session, current_app, send_file
+from flask import render_template, request, redirect, url_for, flash, session, current_app
 from controllers import donaciones_bp
 from decorators import login_required
 from services.donacion_service import DonacionService
 from models.models import db, Usuario
-from email_service import EmailService
-from reporte_pdf import generar_reporte_donante
 import stripe
 
 
@@ -15,80 +13,38 @@ import stripe
 @login_required
 def inicio_donante():
     usuario_id = session.get('usuario_id')
+    
+    # Inicialización de seguridad para evitar UnboundLocalError
+    user_db = None
+    donante = {'foto_perfil': 'default.png', 'nombre': session.get('usuario_nombre', 'Donante'), 'email': session.get('usuario_email', ''), 'telefono': '', 'direccion': ''}
+    necesidades = []
+    donaciones = []
+    stats = {'pendientes': 0, 'recibidas': 0, 'rechazadas': 0, 'alimentos': 0, 'ropa': 0, 'otros': 0, 'monetarias': 0, 'total_combinado': 0}
 
-    # ── DESPACHO DE REPORTE: si el formulario de "Mi Trazabilidad y
-    # Aportes" se envió con accion=reporte, generamos el enlace de
-    # descarga protegido y lo enviamos por correo, sin renderizar el
-    # dashboard completo. ──
-    if request.args.get('accion') == 'reporte':
-        correo_destino = request.args.get('correo_reporte', '').strip()
-        if not correo_destino:
-            flash("Debes indicar un correo para despachar el reporte.", "danger")
-            return redirect(url_for('donaciones.inicio_donante'))
-
-        enlace_descarga = url_for('donaciones.descargar_reporte_donante', _external=True)
-
-        html_content = f"""
-        <html><body style="font-family: Arial, sans-serif;">
-            <h3>Tu Historial de Aportes — Red Solidaria</h3>
-            <p>Hemos preparado el reporte PDF con tu historial completo de aportes.</p>
-            <p>
-                <a href="{enlace_descarga}"
-                   style="display:inline-block; padding:12px 24px; background:#1e52ff;
-                          color:#ffffff; text-decoration:none; border-radius:8px; font-weight:bold;">
-                    📄 Descargar mi Historial PDF
-                </a>
-            </p>
-            <p style="font-size:12px; color:#888;">
-                Este enlace requiere que tengas una sesión activa en Red Solidaria.
-                Si no puedes acceder, inicia sesión primero y haz clic nuevamente.
-            </p>
-        </body></html>
-        """
-
-        exito, mensaje = EmailService.enviar_notificacion(
-            email_destino=correo_destino,
-            nombre_destino=session.get('usuario_nombre', 'Donante'),
-            asunto="Tu Historial de Aportes está listo - Red Solidaria",
-            html_content=html_content
-        )
-
-        flash(
-            "Reporte enviado correctamente a tu correo." if exito
-            else "No fue posible enviar el reporte. Intenta más tarde.",
-            "success" if exito else "danger"
-        )
-        return redirect(url_for('donaciones.inicio_donante'))
-
-    # ── Filtros del formulario multicriterio (Mi Trazabilidad y Aportes) ──
+    # Filtros del formulario multicriterio
     q_filtro = request.args.get('q', '').strip() or None
     categoria_filtro = request.args.get('categoria', '').strip() or None
     estado_filtro = request.args.get('est', '').strip() or None
 
     try:
-        from models.models import Usuario
+        from models.models import Usuario, DonacionFisica, DonacionMonetaria
+        
+        # Intentar obtener usuario
         user_db = Usuario.query.get(usuario_id)
         
-        # 1. Traemos los datos del donante usando el servicio unificado (Ya funciona porque usa el import global)
-        donante = DonacionService.obtener_donante_por_id(usuario_id)
-        if not donante:
-            donante = {
-                'foto_perfil': 'default.png', 
-                'nombre': session.get('usuario_nombre', 'Donante'), 
-                'email': session.get('usuario_email', ''), 
-                'telefono': '', 
-                'direccion': ''
-            }
+        # 1. Datos del donante
+        donante_data = DonacionService.obtener_donante_por_id(usuario_id)
+        if donante_data:
+            donante = donante_data
 
-        # 2. Catálogo: SE ELIMINÓ EL IMPORT DUPLICADO QUE CAUSABA EL ERROR
+        # 2. Catálogo
         necesidades = DonacionService.obtener_necesidades_activas()
 
-        # 3. Historial de impacto (Mantenemos tus consultas para las estadísticas específicas)
-        from models.models import DonacionFisica, DonacionMonetaria
+        # 3. Historial de impacto
         donaciones_fisicas = DonacionFisica.query.filter_by(donante_id=usuario_id).all()
         donaciones_monetarias = DonacionMonetaria.query.filter_by(usuario_id=usuario_id).all()
 
-        # 4. Cálculo de Estadísticas robustas con protección de ceros
+        # 4. Estadísticas
         stats = {
             'pendientes': sum(1 for d in donaciones_fisicas if d.estado == 'pendiente'),
             'recibidas': sum(1 for d in donaciones_fisicas if d.estado in ['recibida', 'completada', 'entregada']),
@@ -100,10 +56,7 @@ def inicio_donante():
             'total_combinado': len(donaciones_fisicas) + len(donaciones_monetarias)
         }
 
-        # 5. Tabla de trazabilidad inferior: aplica los filtros multicriterio
-        # (q, categoria, est) leídos desde la URL. ESTA es la variable real
-        # que donante.html consume ({% for d in donaciones %}) -- NUNCA usar
-        # 'historial' como nombre, esa variable no existe en la plantilla.
+        # 5. Tabla de trazabilidad
         donaciones = DonacionService.obtener_donaciones_filtradas(
             usuario_id=usuario_id,
             q=q_filtro,
@@ -112,18 +65,8 @@ def inicio_donante():
         )
 
     except Exception as e:
-        print(f"Error cargando panel donante optimizado: {e}")
-        donante = {
-            'foto_perfil': 'default.png', 
-            'nombre': session.get('usuario_nombre', 'Donante'), 
-            'email': session.get('usuario_email', ''), 
-            'telefono': '', 
-            'direccion': ''
-        }
-        necesidades = []
-        donaciones = []
-        stats = {'pendientes': 0, 'recibidas': 0, 'rechazadas': 0, 'alimentos': 0, 'ropa': 0, 'otros': 0, 'monetarias': 0, 'total_combinado': 0}
-        flash("No fue posible sincronizar el panel de impacto en este momento.", "danger")
+        print(f"Error cargando panel donante: {e}")
+        flash("Hubo un problema al cargar algunos datos del panel.", "warning")
 
     return render_template(
         'donante.html',
