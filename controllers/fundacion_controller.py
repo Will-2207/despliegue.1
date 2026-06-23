@@ -4,31 +4,12 @@ from controllers import fundacion_bp
 from decorators import login_required
 from models.soporte_manager import SoporteManager
 from services.fundacion_service import FundacionService
-from reporte_pdf import generar_reporte_pdf # Importado desde la raíz
 
-@fundacion_bp.route('/dashboard-fundacion', methods=['GET'])
+
+@fundacion_bp.route('/dashboard-fundacion')
 @login_required
 def dashboard_fundacion():
-    # 1. Lógica para el botón de Despachar Reporte
-    accion = request.args.get('accion')
-    email_reporte = request.args.get('correo_reporte')
-
-    if accion == 'reporte' and email_reporte:
-        try:
-            # Reutilizamos la misma lógica que obtiene el dashboard para generar el reporte
-            # Obtenemos los mismos datos que se pasan al template
-            _, _, contexto = FundacionService.obtener_dashboard(session.get('usuario_id'))
-            
-            # Ajusta 'donaciones' o 'necesidades' según lo que contenga tu objeto contexto
-            datos_reporte = contexto.get('donaciones', []) 
-            
-            generar_reporte_pdf(datos_reporte, email_reporte)
-            flash(f"Reporte enviado exitosamente a {email_reporte}", "success")
-            return redirect(url_for('fundacion.dashboard_fundacion'))
-        except Exception as e:
-            flash(f"Error al enviar el reporte: {str(e)}", "danger")
-
-    # 2. Lógica original de carga de filtros y datos
+    # ── Filtros del formulario "Trazabilidad y Filtros" ──
     q_filtro = request.args.get('q', '').strip() or None
     donante_filtro = request.args.get('donante', '').strip() or None
     categoria_filtro = request.args.get('categoria', '').strip() or None
@@ -48,8 +29,6 @@ def dashboard_fundacion():
         return redirect(url_for('auth.login'))
 
     return render_template('dashboard_fundacion.html', **contexto)
-
-
 
 @fundacion_bp.route('/publicar-necesidad', methods=['GET', 'POST'])
 @login_required

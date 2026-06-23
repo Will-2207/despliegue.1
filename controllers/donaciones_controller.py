@@ -5,55 +5,46 @@ from services.donacion_service import DonacionService
 from models.models import db, Usuario
 import stripe
 
-from reporte_pdf import generar_reporte_pdf
 
 # =========================
 # PANEL DONANTE (ACTUALIZADO CON STATS E HISTORIAL MULTICRITERIO)
 # =========================
- 
-
 @donaciones_bp.route('/panel-donante', methods=['GET'])
 @login_required
 def inicio_donante():
     usuario_id = session.get('usuario_id')
     
-    # 1. Lógica para el botón de Despachar Reporte
-    accion = request.args.get('accion')
-    email_reporte = request.args.get('correo_reporte')
-    
-    if accion == 'reporte' and email_reporte:
-        try:
-            # Reutilizamos la misma consulta que ya hace el panel
-            donaciones_para_reporte = DonacionService.obtener_donaciones_filtradas(usuario_id=usuario_id)
-            generar_reporte_pdf(donaciones_para_reporte, email_reporte)
-            flash(f"Reporte enviado exitosamente a {email_reporte}", "success")
-            return redirect(url_for('donaciones.inicio_donante'))
-        except Exception as e:
-            flash(f"Error al enviar el reporte: {str(e)}", "danger")
-
-    # 2. Inicialización de datos
+    # Inicialización de seguridad para evitar UnboundLocalError
     user_db = None
     donante = {'foto_perfil': 'default.png', 'nombre': session.get('usuario_nombre', 'Donante'), 'email': session.get('usuario_email', ''), 'telefono': '', 'direccion': ''}
     necesidades = []
     donaciones = []
     stats = {'pendientes': 0, 'recibidas': 0, 'rechazadas': 0, 'alimentos': 0, 'ropa': 0, 'otros': 0, 'monetarias': 0, 'total_combinado': 0}
 
+    # Filtros del formulario multicriterio
     q_filtro = request.args.get('q', '').strip() or None
     categoria_filtro = request.args.get('categoria', '').strip() or None
     estado_filtro = request.args.get('est', '').strip() or None
 
     try:
+        from models.models import Usuario, DonacionFisica, DonacionMonetaria
+        
+        # Intentar obtener usuario
         user_db = Usuario.query.get(usuario_id)
         
+        # 1. Datos del donante
         donante_data = DonacionService.obtener_donante_por_id(usuario_id)
         if donante_data:
             donante = donante_data
 
+        # 2. Catálogo
         necesidades = DonacionService.obtener_necesidades_activas()
 
+        # 3. Historial de impacto
         donaciones_fisicas = DonacionFisica.query.filter_by(donante_id=usuario_id).all()
         donaciones_monetarias = DonacionMonetaria.query.filter_by(usuario_id=usuario_id).all()
 
+        # 4. Estadísticas
         stats = {
             'pendientes': sum(1 for d in donaciones_fisicas if d.estado == 'pendiente'),
             'recibidas': sum(1 for d in donaciones_fisicas if d.estado in ['recibida', 'completada', 'entregada']),
@@ -65,6 +56,7 @@ def inicio_donante():
             'total_combinado': len(donaciones_fisicas) + len(donaciones_monetarias)
         }
 
+        # 5. Tabla de trazabilidad
         donaciones = DonacionService.obtener_donaciones_filtradas(
             usuario_id=usuario_id,
             q=q_filtro,
